@@ -8,7 +8,8 @@
 
   var net = null, code = null, pid = null, view = null, prof = null;
   var status = 'connecting', joinedSent = 0, myVote = null, picking = null;
-  var shellBuilt = false, bodyKey = null, raf = 0, recvAt = 0, lastFxKey = null, changingTeam = false;
+  var shellBuilt = false, bodyKey = null, raf = 0, recvAt = 0, lastFxKey = null, changingTeam = false, kSent = null;
+  var KCOL = ['#E21B3C', '#1368CE', '#D89E00', '#26890C'], SHAPES = ['▲', '◆', '●', '■'];
 
   P.savedSession = function () {
     var x = UI.store.get('alibaba.player', null);
@@ -96,7 +97,7 @@
   function onMsg(m) {
     if (m.t === 'welcome' || m.t === 'state') {
       var s = m.s;
-      if (!s || !s.teams) return;
+      if (!s || (!s.teams && s.kind !== 'kahoot')) return;
       if (view && s.id === view.id && s.v < view.v) return;
       view = s; recvAt = Date.now();
       if (s.cfg && s.cfg.theme) UI.applyTheme(s.cfg.theme);
@@ -125,6 +126,7 @@
   /* ---------- Рендер ---------- */
   function render() {
     if (!view) return;
+    if (view.kind === 'kahoot') { renderK(); return; }
     var my = me();
     if (!my) {
       if (joinedSent && Date.now() - joinedSent < 5000) return; // ждём подтверждения
@@ -146,6 +148,8 @@
       if (key.indexOf('board:') !== 0) picking = null;
     }
     UI.patch(main, bodyHtml(my));
+    var wv = UI.$('#phWinVideo');
+    if (wv && !wv.firstChild) UI.winVideo(wv);
     fxFor(my);
   }
 
@@ -161,7 +165,9 @@
     shellBuilt = false; bodyKey = null;
     var started = view.phase !== 'lobby';
     var existing = UI.$('.ph-profile');
-    var teamsHtml = view.teams.map(function (t, i) {
+    if (E.AVATARS.indexOf(prof.av) < 0) prof.av = E.AVATARS[Math.floor(Math.random() * E.AVATARS.length)];
+    var isK = view.kind === 'kahoot';
+    var teamsHtml = isK ? '<button type="button" class="btn btn-yellow btn-lg k-join" data-team="0">Войти в игру</button>' : view.teams.map(function (t, i) {
       return '<button type="button" class="ph-team-btn" data-team="' + i + '" style="--tc:' + t.color + '">' +
         '<span class="dot"></span><b>' + esc(t.name) + '</b><span class="n">' + t.players + '</span></button>';
     }).join('');
@@ -170,24 +176,32 @@
       '<div class="ph ph-profile"><div class="ph-simple-in">' + UI.wordmark('wordmark-sm') +
         '<p class="ph-game">Игра <b>' + esc(UI.fmtCode(code)) + '</b>: ' + esc(view.title) + '</p>' +
         (started ? '<p class="ph-note">Игра уже идёт — можно присоединиться к команде.</p>' : '') +
-        '<label class="lbl" for="nameInput">Как тебя зовут?</label>' +
-        '<div class="name-row"><button type="button" class="av-btn" id="avBtn" aria-label="Сменить значок">' + esc(prof.av) + '</button>' +
-        '<input id="nameInput" maxlength="20" autocomplete="nickname" placeholder="Имя" value="' + esc(prof.name) + '"></div>' +
+        '<label class="lbl" for="nameInput">Твой ник</label>' +
+        '<div class="name-row"><span class="av-cur" id="avCur">' + UI.avImg(prof.av) + '</span>' +
+        '<input id="nameInput" maxlength="20" autocomplete="nickname" placeholder="Придумай ник" value="' + esc(prof.name) + '"></div>' +
         '<p class="form-err" id="nameErr" role="alert"></p>' +
-        '<p class="lbl">Выбери команду</p>' +
+        '<p class="lbl">Выбери аватарку</p>' +
+        '<div class="av-grid" id="avGrid" role="radiogroup">' + E.AVATARS.map(function (a) {
+          var on = a === prof.av;
+          return '<button type="button" role="radio" aria-checked="' + on + '" class="av-opt' + (on ? ' on' : '') + '" data-av="' + a + '" aria-label="' + esc(E.AVATAR_NAMES[a]) + '">' + UI.avImg(a) + '</button>';
+        }).join('') + '</div>' +
+        (isK ? '' : '<p class="lbl">Выбери команду</p>') +
         '<div class="ph-teams" id="phTeams">' + teamsHtml + '</div>' +
       '</div></div>');
-    UI.$('#avBtn').addEventListener('click', function () {
-      var i = E.AVATARS.indexOf(prof.av);
-      prof.av = E.AVATARS[(i + 1) % E.AVATARS.length];
-      this.textContent = prof.av;
+    UI.$('#avGrid').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-av]');
+      if (!b) return;
+      prof.av = b.getAttribute('data-av');
+      UI.$$('#avGrid .av-opt').forEach(function (x) { var on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-checked', String(on)); });
+      UI.$('#avCur').innerHTML = UI.avImg(prof.av);
+      FX.unlock(); FX.play('click');
     });
     UI.$('#phTeams').addEventListener('click', function (e) {
       var b = e.target.closest('[data-team]');
       if (!b) return;
       FX.unlock();
       var name = E.cleanName(UI.$('#nameInput').value, 20);
-      if (!name) { UI.$('#nameErr').textContent = 'Сначала напиши своё имя'; UI.$('#nameInput').focus(); return; }
+      if (!name) { UI.$('#nameErr').textContent = 'Сначала придумай ник'; UI.$('#nameInput').focus(); return; }
       prof.name = name;
       sendJoin(Number(b.getAttribute('data-team')));
       simple('joining', '<div class="spinner" aria-hidden="true"></div><h2>Присоединяемся…</h2>');
@@ -215,7 +229,7 @@
     var t = view.teams[my.team];
     var shell = UI.$('.ph-game-shell');
     shell.style.setProperty('--tc', t.color);
-    UI.patch(UI.$('#phTeam'), '<span class="av">' + esc(my.av) + '</span><span><b>' + esc(my.name) + '</b><small>' + esc(t.name) + '</small></span>');
+    UI.patch(UI.$('#phTeam'), UI.avImg(my.av, 'av ph-av') + '<span><b>' + esc(my.name) + '</b><small>' + esc(t.name) + '</small></span>');
     FX.countTo(UI.$('#phScore'), t.score);
   }
 
@@ -223,8 +237,8 @@
     raf = requestAnimationFrame(timerFrame);
     var el = UI.$('#phTimer');
     if (!el) return;
-    var c = view && view.cur;
-    var on = view && view.phase === 'question' && c && c.remain != null && c.total;
+    var c = view && (view.kind === 'kahoot' ? view.q : view.cur);
+    var on = view && (view.phase === 'question' || (view.kind === 'kahoot' && view.phase === 'q')) && c && c.remain != null && c.total;
     el.hidden = !on;
     if (!on) return;
     var remain = Math.max(0, c.remain - (Date.now() - recvAt));
@@ -259,10 +273,10 @@
         }).join('') + '</div><button type="button" class="btn btn-ghost" data-cancel="1">Отмена</button>';
       }
       return '<div class="ph-wait">' +
-        '<div class="ph-big-av">' + esc(my.av) + '</div>' +
+        '<div class="ph-big-av">' + UI.avImg(my.av, 'big-av') + '</div>' +
         '<h2 class="ph-h">Ты в команде <span style="color:' + view.teams[my.team].color + '">' + esc(view.teams[my.team].name) + '</span></h2>' +
         '<p class="muted">Ждём, пока организатор начнёт игру. Смотри на большой экран!</p>' +
-        '<div class="ph-mates">' + mates.map(function (p) { return '<span class="chip' + (p.on ? '' : ' off') + '"><span class="av">' + esc(p.av) + '</span>' + esc(p.name) + '</span>'; }).join('') + '</div>' +
+        '<div class="ph-mates">' + mates.map(function (p) { return '<span class="chip' + (p.on ? '' : ' off') + '">' + UI.avImg(p.av) + esc(p.name) + '</span>'; }).join('') + '</div>' +
         '<button type="button" class="btn btn-ghost" data-change="1">Сменить команду</button></div>';
     }
     if (ph === 'board') {
@@ -322,8 +336,7 @@
       var tie = rk.filter(function (x) { return x.place === mineR.place; }).length > 1;
       var title = mineR.place === 1 ? (tie ? 'Ничья на первом месте!' : 'Твоя команда победила!') : 'Твоя команда на ' + mineR.place + '-м месте';
       var art = mineR.place === 1 ?
-        '<div class="ph-win"><img class="ph-trophy" src="img/ui/trophy.webp" alt=""><div class="cel-dancers small">' +
-          ['dance1', 'party', 'monkey', 'dance2'].map(function (n, i) { return '<img src="img/ui/' + n + '.webp" alt="" style="--i:' + i + '">'; }).join('') + '</div></div>' :
+        '<div class="ph-win"><img class="ph-trophy" src="img/ui/trophy.webp" alt=""><div class="win-video ph-win-video" id="phWinVideo"></div></div>' :
         '<div class="ph-win"><img class="ph-trophy" src="img/ui/' + (mineR.place <= 3 ? 'medal' + mineR.place : 'clap') + '.webp" alt=""></div>';
       return '<div class="ph-end">' + art + '<h2 class="ph-h">' + title + '</h2>' + scoreboard() +
         '<p class="muted center">Организатор может начать новую игру — не закрывай страницу.</p>' +
@@ -384,4 +397,93 @@
       if (rk.filter(function (x) { return x.i === my.team; })[0].place === 1) { FX.play('win'); FX.confetti({ count: 150, rain: true }); }
     } else if (key[0] === 't') { FX.vibrate(60); }
   }
+
+  /* ================= Режим «каждый за себя» ================= */
+  function renderK() {
+    var my = me();
+    if (!my) {
+      if (joinedSent && Date.now() - joinedSent < 5000) return;
+      profileScreen();
+      return;
+    }
+    prof.team = 0;
+    saveSession();
+    buildShell();
+    var shell = UI.$('.ph-game-shell');
+    shell.style.setProperty('--tc', '#FFD23F');
+    UI.patch(UI.$('#phTeam'), UI.avImg(my.av, 'av ph-av') + '<span><b>' + esc(my.name) + '</b><small>' + (view.phase !== 'lobby' ? my.place + '-е место' : 'в игре') + '</small></span>');
+    FX.countTo(UI.$('#phScore'), my.score);
+    var key = 'k:' + view.phase + ':' + view.qi;
+    var main = UI.$('#phMain');
+    if (key !== bodyKey) { bodyKey = key; main.className = 'ph-main k-' + view.phase; main.innerHTML = ''; main._html = null; }
+    var res = view.phase === 'res' && my.last;
+    shell.classList.toggle('k-good', !!(res && my.last.ok));
+    shell.classList.toggle('k-bad', !!(view.phase === 'res' && !(my.last && my.last.ok)));
+    UI.patch(main, kBody(my));
+    var wv = UI.$('#phWinVideo');
+    if (wv && !wv.firstChild) UI.winVideo(wv);
+    kFx(my);
+  }
+  function kBody(my) {
+    var ph = view.phase, q = view.q;
+    if (ph === 'lobby') {
+      return '<div class="ph-wait"><div class="ph-big-av">' + UI.avImg(my.av, 'big-av') + '</div>' +
+        '<h2 class="ph-h">Ты в игре!</h2><p class="muted">Найди свой ник на большом экране. Игра скоро начнётся.</p></div>';
+    }
+    if (ph === 'get') {
+      return '<div class="k-get"><p class="k-qn">Вопрос ' + (view.qi + 1) + ' из ' + view.total + '</p><h2 class="ph-q">' + esc(q.text) + '</h2><p class="k-ready">Приготовься!</p></div>';
+    }
+    if (ph === 'q') {
+      if (my.answered || kSent === view.qi) {
+        return '<div class="k-wait"><div class="spinner" aria-hidden="true"></div><h2 class="ph-h">Ответ принят!</h2><p class="muted">Ждём остальных…</p></div>';
+      }
+      return '<h2 class="ph-q k-q">' + esc(q.text) + '</h2><div class="k-grid">' + q.opts.map(function (o, i) {
+        return '<button type="button" class="k-btn" data-kopt="' + i + '" style="--kc:' + KCOL[i] + '"><span class="kh-shape">' + SHAPES[i] + '</span><span>' + esc(o) + '</span></button>';
+      }).join('') + '</div>';
+    }
+    if (ph === 'res') {
+      var L = my.last, out;
+      if (L && L.ok) out = '<div class="k-res"><div class="k-res-ico">✓</div><h2>Верно!</h2><p class="k-pts">+' + L.pts + '</p>' + (my.streak >= 2 ? '<p class="k-streak">🔥 Серия ' + my.streak + '</p>' : '') + '</div>';
+      else out = '<div class="k-res"><div class="k-res-ico">✗</div><h2>' + (L && L.opt != null ? 'Неверно' : 'Время вышло') + '</h2><p class="k-right">Правильно: ' + esc(q.opts[q.correct]) + '</p></div>';
+      return out + '<p class="k-place">Ты на ' + my.place + '-м месте</p>';
+    }
+    if (ph === 'board') {
+      var above = null;
+      view.players.forEach(function (p) { if (p.place === my.place - 1) above = p; });
+      return '<div class="k-res plain"><div class="ph-big-av">' + UI.avImg(my.av, 'big-av') + '</div><h2>' + my.place + '-е место</h2><p class="k-pts">' + my.score + ' очков</p>' +
+        (above ? '<p class="muted">До ' + esc(above.name) + ' — ' + (above.score - my.score) + ' очков</p>' : (my.place === 1 ? '<p class="muted">Ты лидер! Так держать!</p>' : '')) + '</div>';
+    }
+    if (ph === 'end') {
+      var top = my.place <= 3;
+      return '<div class="ph-end">' + (my.place === 1 ? '<div class="ph-win"><img class="ph-trophy" src="img/ui/trophy.webp" alt=""><div class="win-video ph-win-video" id="phWinVideo"></div></div>' :
+        '<div class="ph-win"><img class="ph-trophy" src="img/ui/' + (top ? 'medal' + my.place : 'clap') + '.webp" alt=""></div>') +
+        '<h2 class="ph-h">' + (my.place === 1 ? 'Ты победил!' : 'Ты на ' + my.place + '-м месте') + '</h2><p class="k-pts center">' + my.score + ' очков</p>' +
+        '<p class="muted center">Организатор может начать новую игру — не закрывай страницу.</p>' +
+        '<button type="button" class="btn btn-ghost" data-leave="1">Выйти</button></div>';
+    }
+    return '';
+  }
+  function kFx(my) {
+    var key = null;
+    if (view.phase === 'res') key = 'r' + view.qi;
+    else if (view.phase === 'end') key = 'e' + view.id;
+    else if (view.phase === 'q') key = 'q' + view.qi;
+    if (!key || key === lastFxKey) return;
+    var first = lastFxKey === null;
+    lastFxKey = key;
+    if (first) return;
+    if (key[0] === 'r') {
+      if (my.last && my.last.ok) { FX.play('correct'); FX.vibrate([30, 40, 30]); FX.confetti({ count: 60, y: innerHeight * 0.35 }); }
+      else { FX.play('wrong'); FX.vibrate(200); }
+    } else if (key[0] === 'e' && my.place === 1) { FX.play('win'); FX.confetti({ count: 150, rain: true }); }
+    else if (key[0] === 'q') FX.vibrate(40);
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-kopt]');
+    if (!b || !view || view.kind !== 'kahoot' || view.phase !== 'q' || !net) return;
+    kSent = view.qi;
+    net.send({ t: 'answer', opt: Number(b.getAttribute('data-kopt')) });
+    FX.vibrate(20);
+    renderK();
+  });
 })(window);

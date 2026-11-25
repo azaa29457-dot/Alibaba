@@ -7,6 +7,7 @@
   var ANS_COLORS = ['#6A4DFF', '#008F7A', '#E06A00', '#E0337F'];
 
   var s = null;          // состояние игры (движок)
+  function G() { return s && s.kind === 'kahoot' ? FB.Kahoot : E; }
   var net = null;        // сеть (только режим с телефонами)
   var netStatus = null;
   var timers = [];
@@ -18,9 +19,10 @@
   /* ---------- Сохранение ---------- */
   H.savedGame = function () {
     var g = UI.store.get('alibaba.host', null);
-    if (!g || !g.s || !g.s.tiles || g.s.phase === 'end') return null;
+    if (!g || !g.s || g.s.phase === 'end') return null;
     if (Date.now() - (g.t || 0) > 12 * 3600 * 1000) return null;
-    return { title: g.s.cfg.title, left: E.leftTiles(g.s) };
+    if (g.s.kind === 'kahoot') return g.s.qs ? { title: g.s.cfg.title, left: FB.Kahoot.left(g.s) } : null;
+    return g.s.tiles ? { title: g.s.cfg.title, left: E.leftTiles(g.s) } : null;
   };
   H.clearSave = function () { UI.store.del('alibaba.host'); };
   function save() { if (s) UI.store.set('alibaba.host', { t: Date.now(), s: s }); }
@@ -28,8 +30,8 @@
   /* ---------- Запуск ---------- */
   H.create = function (cfg) {
     H.stop();
-    if (cfg.mode === 'phones') cfg.code = FB.Net.makeCode();
-    s = E.createGame(cfg, Date.now());
+    if (cfg.mode === 'phones' || cfg.mode === 'kahoot') cfg.code = FB.Net.makeCode();
+    s = cfg.mode === 'kahoot' ? FB.Kahoot.create(cfg, Date.now()) : E.createGame(cfg, Date.now());
     save();
     begin(false);
   };
@@ -39,7 +41,8 @@
     H.stop();
     s = g.s;
     Object.keys(s.players || {}).forEach(function (k) { s.players[k].online = false; });
-    if (s.cur && s.cur.deadline) s.cur.deadline = Date.now() + s.cfg.timer * 1000; // время на вопрос заново
+    if (s.kind === 'kahoot') { if (s.phase === 'q' || s.phase === 'get') { s.phase = 'get'; s.until = Date.now() + FB.Kahoot.GET_READY; s.cur.ans = {}; } }
+    else if (s.cur && s.cur.deadline) s.cur.deadline = Date.now() + s.cfg.timer * 1000; // время на вопрос заново
     s.v++;
     save();
     begin(true);
@@ -63,7 +66,7 @@
     UI.applyTheme(s.cfg.theme);
     FX._wantAwake = true;
     FX.keepAwake();
-    if (s.mode === 'phones') startNet(resumed);
+    if (s.mode === 'phones' || s.mode === 'kahoot') startNet(resumed);
     timers.push(setInterval(tick, 200));
     timers.push(setInterval(presence, 3000));
     timers.push(setInterval(function () { broadcast(); }, 5000));
@@ -96,7 +99,7 @@
   /* ---------- Действия ---------- */
   H.act = function (a) {
     if (!s) return false;
-    var r = E.act(s, a, Date.now());
+    var r = G().act(s, a, Date.now());
     if (r.ok) {
       save();
       broadcast();
@@ -114,46 +117,21 @@
   }
   function celebrate() {
     if (!s || s.phase !== 'end') return;
-    removeCelebration();
-    var rk = E.ranking(s.teams), top = rk[0];
-    var tie = rk.length > 1 && rk[1].t.score === top.t.score;
-    var vid = UI.videoEmbed(s.cfg.winVideo);
-    var el = document.createElement('div');
-    el.id = 'celebrate';
-    el.className = 'celebrate' + (vid ? ' with-video' : '');
-    el.setAttribute('role', 'dialog');
-    el.setAttribute('aria-label', 'Победа');
-    el.style.setProperty('--tc', top.t.color);
-    var dancers = ['dance1', 'party', 'monkey', 'robot', 'unicorn', 'cool', 'dance2'];
-    var pops = ['fireworks', 'confetti', 'clap', 'hundred', 'fireworks', 'starstruck'];
-    el.innerHTML = '<div class="cel-rays" aria-hidden="true"></div>' +
-      pops.map(function (n, i) { return '<img class="cel-pop p' + i + '" src="img/ui/' + n + '.webp" alt="" aria-hidden="true">'; }).join('') +
-      '<div class="cel-in">' +
-        '<img class="cel-trophy" src="img/ui/trophy.webp" alt="">' +
-        '<h2 class="cel-title">' + (tie ? 'Ничья!' : 'Победа!') + '</h2>' +
-        (tie ? '' : '<p class="cel-team"><span>' + esc(top.t.name) + '</span></p>') +
-        (vid ? '<div class="cel-video">' + vid + '</div>' :
-          '<div class="cel-dancers" aria-hidden="true">' + dancers.map(function (n, i) { return '<img src="img/ui/' + n + '.webp" alt="" style="--i:' + i + '">'; }).join('') + '</div>') +
-        '<button class="btn btn-yellow btn-lg" type="button" id="celClose">Итоги</button>' +
-      '</div>';
-    document.body.appendChild(el);
-    el.querySelector('#celClose').addEventListener('click', removeCelebration);
     FX.play('win');
     FX.confetti({ count: 240, rain: true });
     setTimeout(function () { FX.confetti({ count: 140, y: innerHeight * 0.35, power: 13 }); }, 900);
-    setTimeout(function () { FX.confetti({ count: 120, x: innerWidth * 0.2, y: innerHeight * 0.5, power: 11 }); FX.confetti({ count: 120, x: innerWidth * 0.8, y: innerHeight * 0.5, power: 11 }); }, 1800);
-    if (!vid) celT = setTimeout(removeCelebration, 10000);
+    setTimeout(function () { FX.confetti({ count: 110, x: innerWidth * 0.15, y: innerHeight * 0.55, power: 11 }); FX.confetti({ count: 110, x: innerWidth * 0.85, y: innerHeight * 0.55, power: 11 }); }, 1800);
   }
   function closePlayers() { if (net) net.broadcast({ t: 'closed' }); }
   function broadcast() {
-    if (net && s) net.broadcast({ t: 'state', s: E.view(s) });
+    if (net && s) net.broadcast({ t: 'state', s: G().view(s) });
   }
 
   function onMsg(pid, m, via) {
     if (!s) return;
     var p = s.players[pid];
     if (m.t === 'hello') {
-      net.reply(via, pid, { t: 'welcome', s: E.view(s) });
+      net.reply(via, pid, { t: 'welcome', s: G().view(s) });
       if (p) touch(pid);
       return;
     }
@@ -161,14 +139,15 @@
     switch (m.t) {
       case 'join':
         H.act({ type: 'join', pid: pid, name: m.name, team: Number(m.team), av: m.av });
-        net.sendTo(pid, { t: 'state', s: E.view(s) });
+        net.sendTo(pid, { t: 'state', s: G().view(s) });
         break;
       case 'team': H.act({ type: 'setTeam', pid: pid, team: Number(m.team) }); break;
       case 'pick': if (p) H.act({ type: 'pick', tile: Number(m.tile), team: p.team }); break;
       case 'vote': H.act({ type: 'vote', pid: pid, opt: Number(m.opt) }); break;
+      case 'answer': H.act({ type: 'answer', pid: pid, opt: Number(m.opt) }); break;
       case 'target': if (p) H.act({ type: 'target', target: Number(m.target), team: p.team }); break;
       case 'bye': H.act({ type: 'online', pid: pid, on: false }); break;
-      case 'sync': net.sendTo(pid, { t: 'state', s: E.view(s) }); break;
+      case 'sync': net.sendTo(pid, { t: 'state', s: G().view(s) }); break;
     }
   }
   function touch(pid) {
@@ -178,7 +157,7 @@
     if (!p.online) H.act({ type: 'online', pid: pid, on: true });
   }
   function presence() {
-    if (!s || s.mode !== 'phones') return;
+    if (!s || (s.mode !== 'phones' && s.mode !== 'kahoot')) return;
     var now = Date.now();
     Object.keys(s.players).forEach(function (k) {
       var p = s.players[k];
@@ -186,6 +165,16 @@
     });
   }
   function tick() {
+    if (s && s.kind === 'kahoot') {
+      if (s.phase === 'get' && Date.now() >= s.until) { H.act({ type: 'tick' }); return; }
+      if (s.phase === 'q') {
+        var rk = s.cur.deadline - Date.now();
+        if (rk <= 0) { H.act({ type: 'tick' }); return; }
+        var sk = Math.ceil(rk / 1000);
+        if (sk <= 5 && sk !== lastTickSec) { lastTickSec = sk; FX.play('tick'); }
+      }
+      return;
+    }
     if (!s || s.phase !== 'question' || !s.cur || !s.cur.deadline) { lastTickSec = null; return; }
     var remain = s.cur.deadline - Date.now();
     if (remain <= 0) { H.act({ type: 'timeout' }); return; }
@@ -194,6 +183,7 @@
   }
   function frame() {
     raf = requestAnimationFrame(frame);
+    if (s && s.kind === 'kahoot') { kFrame(); return; }
     var fill = document.querySelector('.ov-q .ruler-fill');
     if (!fill || !s || !s.cur) return;
     var secEl = document.querySelector('.ov-q .ruler-sec');
@@ -233,6 +223,10 @@
           setTimeout(celebrate, 250);
           break;
         case 'restart': removeCelebration(); break;
+        case 'kq': FX.play('open'); break;
+        case 'kanswer': FX.play('vote'); break;
+        case 'kres': FX.play('bonus'); break;
+        case 'kget': FX.play('join'); break;
       }
     });
   }
@@ -246,6 +240,10 @@
     var k = e.key;
     if (k === 'f' || k === 'F' || k === 'а' || k === 'А') { toggleFull(); return; }
     if (k === 'm' || k === 'M' || k === 'ь' || k === 'Ь') { toggleSound(); return; }
+    if (s.kind === 'kahoot') {
+      if ((k === ' ' || k === 'Enter') && (s.phase === 'res' || s.phase === 'board' || s.phase === 'get')) { H.act({ type: 'next' }); e.preventDefault(); }
+      return;
+    }
     if (s.phase === 'question' && /^[1-4]$/.test(k)) { H.act({ type: 'answer', opt: Number(k) - 1 }); e.preventDefault(); return; }
     if ((k === ' ' || k === 'Enter') && (s.phase === 'reveal' || s.phase === 'bonusReveal')) {
       if (document.activeElement && document.activeElement.tagName === 'BUTTON' && k === 'Enter') return;
@@ -267,6 +265,7 @@
   /* ================= Рендер ================= */
   function render(force) {
     if (!s) return;
+    if (s.kind === 'kahoot') { renderK(force); return; }
     var v = E.view(s);
     var want = v.phase === 'lobby' ? 'lobby' : (v.phase === 'end' ? 'end' : 'game');
     if (force || built !== want) {
@@ -309,7 +308,8 @@
     m.className = 'menu-pop';
     m.setAttribute('role', 'menu');
     var items = [];
-    if (s.phase === 'board') items.push(['skip', 'Передать ход следующей команде']);
+    if (s.kind === 'kahoot' && s.phase === 'q') items.push(['close', 'Завершить вопрос']);
+    if (s.kind !== 'kahoot' && s.phase === 'board') items.push(['skip', 'Передать ход следующей команде']);
     if (s.phase !== 'end' && s.phase !== 'lobby') items.push(['end', 'Завершить игру и показать итоги']);
     items.push(['home', 'Выйти на главную']);
     m.innerHTML = items.map(function (i) { return '<button role="menuitem" type="button" data-m="' + i[0] + '">' + i[1] + '</button>'; }).join('');
@@ -327,6 +327,7 @@
       var k = b.getAttribute('data-m');
       close();
       if (k === 'skip') H.act({ type: 'skip' });
+      else if (k === 'close') H.act({ type: 'close' });
       else if (k === 'end') UI.confirm('Завершить игру сейчас и показать итоги?', 'Завершить').then(function (ok) { if (ok) H.act({ type: 'end' }); });
       else if (k === 'home') {
         var msg = s.phase === 'end' ? 'Выйти на главную?' : 'Выйти на главную? Игру можно будет продолжить с главной страницы.';
@@ -415,7 +416,7 @@
         '<h3><span class="dot"></span>' + esc(t.name) + '<span class="lt-n">' + ps.length + '</span></h3>' +
         '<div class="chips">' + (ps.length ? ps.map(function (p) {
           return '<span class="chip' + (p.on ? '' : ' off') + '" data-pid="' + esc(p.id) + '" title="Нажмите, чтобы перевести в другую команду">' +
-            '<span class="av" aria-hidden="true">' + esc(p.av) + '</span>' + esc(p.name) +
+            UI.avImg(p.av) + esc(p.name) +
             '<button type="button" class="chip-x" data-kick="' + esc(p.id) + '" aria-label="Удалить ' + esc(p.name) + '">×</button></span>';
         }).join('') : '<span class="chips-empty">Пока никого</span>') + '</div></div>';
     }).join('');
@@ -439,81 +440,70 @@
       }).join('') + '</span>';
   }
 
-  /* ---------- Игровое поле ---------- */
+  /* ---------- Игровое поле (как в Baamboozle: команды сверху, синие плитки) ---------- */
+  function tools(v) {
+    return '<div class="bz-tools">' +
+      '<button class="bz-btn" data-act="menu" type="button" aria-label="Меню" title="Меню">✕</button>' +
+      '<button class="bz-btn" data-act="sound" type="button" aria-label="' + (FX.isMuted() ? 'Включить звук' : 'Выключить звук') + '" title="Звук (M)">' + soundIcon() + '</button>' +
+      '<button class="bz-btn" data-act="full" type="button" aria-label="Во весь экран" title="Во весь экран (F)">⛶</button>' +
+      (v.mode === 'phones' || v.mode === 'kahoot' ? '<button class="bz-btn" data-act="code" type="button" aria-label="Код для входа" title="Код для входа">#</button>' : '') +
+    '</div>';
+  }
   function buildGame(v) {
     var n = v.tiles.length;
-    var cols = n <= 4 ? n : (n <= 12 ? 4 : (n <= 25 ? 5 : 6));
+    var cols = n <= 9 ? 3 : (n <= 16 ? 4 : (n <= 25 ? 5 : (n <= 36 ? 6 : 7)));
     var rows = Math.ceil(n / cols);
-    var two = v.teams.length === 2;
-    var teamCards = v.teams.map(function (t, i) {
-      return '<div class="team-card" data-team="' + i + '" style="--tc:' + t.color + ';grid-area:t' + i + '">' +
-        '<div class="tc-name">' + esc(t.name) + '</div>' +
-        '<div class="tc-score" data-val="' + t.score + '">' + t.score + '</div>' +
-        '<div class="tc-turn">Ваш ход</div>' +
-        '<div class="tc-meta"></div>' +
-        '<div class="tc-adj"><button type="button" data-adj="-5" aria-label="Минус 5 очков команде ' + esc(t.name) + '">−5</button>' +
-        '<button type="button" data-adj="5" aria-label="Плюс 5 очков команде ' + esc(t.name) + '">+5</button></div>' +
-      '</div>';
-    }).join('');
     UI.screen('game',
-      '<div class="game">' + topBar(v, '<div class="g-progress" id="progress"></div>') +
-        '<div class="g-main ' + (two ? 'two' : 'many') + '" data-n="' + v.teams.length + '">' +
-          teamCards +
-          '<div class="board-wrap" style="grid-area:board">' +
-            '<div class="board" id="board" style="--cols:' + cols + ';--rows:' + rows + '"></div>' +
-            '<p class="board-hint" id="boardHint"></p>' +
-          '</div>' +
-        '</div>' +
+      '<div class="game bz">' +
+        '<header class="bz-head" style="--n:' + v.teams.length + '">' +
+          v.teams.map(function (t, i) {
+            return '<div class="bz-team" data-team="' + i + '" style="--tc:' + t.color + '">' +
+              '<span class="bz-name">' + esc(t.name) + '</span>' +
+              '<span class="bz-score" data-val="' + t.score + '">' + t.score + '</span>' +
+              '<span class="bz-adj"><button type="button" data-adj="-5" aria-label="Минус 5 очков">−5</button><button type="button" data-adj="5" aria-label="Плюс 5 очков">+5</button></span>' +
+            '</div>';
+          }).join('') +
+        '</header>' +
+        tools(v) +
+        '<main class="bz-main"><div class="board" id="board" style="--cols:' + cols + ';--rows:' + rows + '"></div></main>' +
         '<div id="overlay"></div>' +
       '</div>');
     var g = UI.$('.game');
-    bindTop(g.querySelector('.g-top'));
+    bindTop(g.querySelector('.bz-tools'));
     UI.$('#board').addEventListener('click', function (e) {
       var t = e.target.closest('[data-tile]');
       if (t && s.phase === 'board') { FX.unlock(); H.act({ type: 'pick', tile: Number(t.getAttribute('data-tile')) }); }
     });
-    g.querySelector('.g-main').addEventListener('click', function (e) {
+    g.querySelector('.bz-head').addEventListener('click', function (e) {
       var b = e.target.closest('[data-adj]');
       if (!b) return;
-      var team = Number(b.closest('[data-team]').getAttribute('data-team'));
-      H.act({ type: 'adjust', team: team, delta: Number(b.getAttribute('data-adj')) });
+      H.act({ type: 'adjust', team: Number(b.closest('[data-team]').getAttribute('data-team')), delta: Number(b.getAttribute('data-adj')) });
     });
     UI.$('#overlay').addEventListener('click', onOverlayClick);
   }
 
   function updateGame(v) {
-    var pr = UI.$('#progress');
-    if (pr) pr.textContent = 'Осталось ' + v.left + ' из ' + v.tiles.length;
     v.teams.forEach(function (t, i) {
-      var card = document.querySelector('.team-card[data-team="' + i + '"]');
-      if (!card) return;
-      card.classList.toggle('turn', v.turn === i);
-      FX.countTo(card.querySelector('.tc-score'), t.score);
-      var meta = 'Верно ' + t.correct + ' из ' + t.answered;
-      if (v.mode === 'phones') meta += '<br>' + t.players + ' ' + UI.plural(t.players, 'игрок', 'игрока', 'игроков');
-      UI.patch(card.querySelector('.tc-meta'), meta);
+      var el = document.querySelector('.bz-team[data-team="' + i + '"]');
+      if (!el) return;
+      el.classList.toggle('turn', v.turn === i);
+      FX.countTo(el.querySelector('.bz-score'), t.score);
     });
+    var cols = Number(getComputedStyle(UI.$('#board')).getPropertyValue('--cols')) || 5;
     var boardHtml = v.tiles.map(function (t, i) {
+      var dark = ((Math.floor(i / cols) + (i % cols)) % 2) === 1;
       if (t.used) {
-        var tc = t.by != null && v.teams[t.by] ? v.teams[t.by].color : '#fff';
+        var tc = t.by != null && v.teams[t.by] ? v.teams[t.by].color : '#ccc';
         var cur = v.cur && v.cur.tile === i;
         var res = '';
-        if (t.kind === 'p') res = '<span class="tile-ico" aria-label="бонус">' + UI.powerImg(t.icon) + '</span>';
-        else if (!(cur && t.ok == null)) res = '<span class="tile-res" aria-label="' + (t.ok ? 'верно' : 'неверно') + '">' + (t.ok ? '✓' : '✗') + '</span>';
-        return '<div class="tile used' + (t.kind === 'p' ? ' pw' : (t.ok ? ' ok' : ' no')) + (cur ? ' current' : '') + '" style="--tc:' + tc + '">' +
-          '<span class="tile-n">' + t.n + '</span>' + res + '</div>';
+        if (t.kind === 'p') res = '<span class="tile-ico">' + UI.powerImg(t.icon) + '</span>';
+        else if (!(cur && t.ok == null)) res = '<span class="tile-res' + (t.ok ? ' ok' : '') + '">' + (t.ok ? '✓' : '✗') + '</span>';
+        return '<div class="tile used" style="--tc:' + tc + '"><span class="tile-n">' + t.n + '</span>' + res + '</div>';
       }
-      return '<button type="button" class="tile c' + t.c + '" data-tile="' + i + '" aria-label="Плитка ' + t.n + '" style="animation-delay:' + Math.min(i * 22, 700) + 'ms">' +
+      return '<button type="button" class="tile ' + (dark ? 'dk' : 'lt') + '" data-tile="' + i + '" aria-label="Плитка ' + t.n + '" style="animation-delay:' + Math.min(i * 20, 600) + 'ms">' +
         '<span class="tile-n">' + t.n + '</span></button>';
     }).join('');
     UI.patch(UI.$('#board'), boardHtml);
-    var hint = '';
-    if (v.phase === 'board') {
-      var tn = v.teams[v.turn];
-      hint = 'Ход команды <b style="color:' + tn.color + '">' + esc(tn.name) + '</b>: ' +
-        (v.mode === 'phones' && tn.players ? 'выберите плитку на телефоне' + (tn.players > 1 ? ' (любой игрок команды)' : '') + ' или здесь' : 'выберите плитку');
-    }
-    UI.patch(UI.$('#boardHint'), hint);
     updateOverlay(v);
   }
 
@@ -664,38 +654,187 @@
     if ((t = e.target.closest('[data-target]')) && s.phase === 'target') { H.act({ type: 'target', target: Number(t.getAttribute('data-target')) }); return; }
   }
 
-  /* ---------- Итоги ---------- */
+  /* ---------- Окно победы ---------- */
   function buildEnd(v) {
-    var rk = E.ranking(v.teams);
-    var top = rk[0];
+    var rk = E.ranking(v.teams), top = rk[0];
     var tie = rk.length > 1 && rk[1].t.score === top.t.score;
-    var title = tie ? 'Ничья!' : 'Победила команда';
-    var podOrder = rk.length >= 3 ? [rk[1], rk[0], rk[2]] : (rk.length === 2 ? [rk[1], rk[0]] : rk);
-    var podium = podOrder.map(function (x) {
-      return '<div class="pod place' + x.place + '" style="--tc:' + x.t.color + '">' +
-        '<span class="pod-name">' + esc(x.t.name) + '</span>' +
-        '<span class="pod-score">' + x.t.score + '</span>' +
-        '<span class="pod-bar"><span class="pod-place">' + x.place + '</span></span></div>';
-    }).join('');
-    var rows = rk.map(function (x) {
-      return '<tr style="--tc:' + x.t.color + '"><td class="pl">' + x.place + '</td><td class="nm"><span class="dot"></span>' + esc(x.t.name) + '</td>' +
-        '<td class="sc">' + x.t.score + '</td><td class="st">верно ' + x.t.correct + ' из ' + x.t.answered + '</td></tr>';
-    }).join('');
+    var medals = ['medal1', 'medal2', 'medal3'];
     UI.screen('end',
-      '<div class="end">' + topBar(v) +
-        '<div class="end-main">' +
-          '<h1 class="end-title">' + title + (tie ? '' : ' <span style="color:' + top.t.color + '">' + esc(top.t.name) + '</span>') + '</h1>' +
-          '<div class="podium podium-' + Math.min(3, rk.length) + '">' + podium + '</div>' +
-          '<table class="end-table"><caption class="sr-only">Итоги</caption><tbody>' + rows + '</tbody></table>' +
-          '<div class="end-actions">' +
-            '<button class="btn btn-yellow btn-lg" type="button" id="againBtn">Сыграть ещё раз</button>' +
-            '<button class="btn btn-ghost" type="button" id="newBtn">Новая игра</button>' +
-            '<button class="btn btn-ghost" type="button" id="homeBtn">На главную</button>' +
+      '<div class="bz-end">' +
+        tools(v) +
+        '<div class="win-card" role="dialog" aria-label="Итоги игры">' +
+          '<img class="win-trophy" src="img/ui/trophy.webp" alt="">' +
+          '<h1 class="win-title">' + (tie ? 'Ничья!' : 'Победила команда <span style="--tc:' + top.t.color + '">' + esc(top.t.name) + '</span>') + '</h1>' +
+          '<div class="win-video" id="winVideo"></div>' +
+          '<ol class="win-list">' + rk.map(function (x) {
+            return '<li style="--tc:' + x.t.color + '">' +
+              (x.place <= 3 ? '<img class="win-medal" src="img/ui/' + medals[x.place - 1] + '.webp" alt="' + x.place + ' место">' : '<span class="win-place">' + x.place + '</span>') +
+              '<span class="win-name">' + esc(x.t.name) + '</span><span class="win-score">' + x.t.score + '</span></li>';
+          }).join('') + '</ol>' +
+          '<div class="win-actions">' +
+            '<button class="btn bz-primary btn-lg" type="button" id="againBtn">Играть ещё раз</button>' +
+            '<button class="btn bz-secondary" type="button" id="newBtn">Новая игра</button>' +
+            '<button class="btn bz-secondary" type="button" id="homeBtn">На главную</button>' +
           '</div>' +
-          '<p class="hint center">«Сыграть ещё раз» — те же темы и команды, вопросы перемешаются заново' + (v.mode === 'phones' ? ', игроки останутся в игре' : '') + '.</p>' +
         '</div>' +
       '</div>');
-    bindTop(UI.$('.end .g-top'));
+    bindTop(UI.$('.bz-end .bz-tools'));
+    UI.winVideo(UI.$('#winVideo'), s.cfg.winVideo);
+    UI.$('#againBtn').addEventListener('click', function () { H.act({ type: 'restart' }); });
+    UI.$('#newBtn').addEventListener('click', function () { H.clearSave(); closePlayers(); s = null; H.stop(); UI.setup(); });
+    UI.$('#homeBtn').addEventListener('click', function () { H.clearSave(); closePlayers(); s = null; H.stop(); UI.home(); });
+  }
+
+  /* ================= Режим «каждый за себя» (как в Kahoot) ================= */
+  var SHAPES = ['▲', '◆', '●', '■'];
+  var KCOL = ['#E21B3C', '#1368CE', '#D89E00', '#26890C'];
+  function renderK(force) {
+    var v = FB.Kahoot.view(s);
+    var want = v.phase === 'lobby' ? 'k-lobby' : (v.phase === 'end' ? 'k-end' : 'k-game');
+    if (force || built !== want) {
+      built = want;
+      if (want === 'k-lobby') buildKLobby(v);
+      else if (want === 'k-end') buildKEnd(v);
+      else buildKGame(v);
+    }
+    if (want === 'k-lobby') updateKLobby(v);
+    else if (want === 'k-game') updateKGame(v);
+  }
+  function buildKLobby(v) {
+    var url = UI.joinUrl(v.code);
+    var host = url.replace(/^https?:\/\//, '').replace(/\?.*$/, '');
+    UI.screen('k-lobby',
+      '<div class="kh kh-lobby">' + tools(v) +
+        '<header class="kh-pinbar">' +
+          '<div class="kh-join"><span>Заходи на</span><b>' + esc(host) + '</b></div>' +
+          '<div class="kh-pin"><span>PIN игры:</span><b>' + esc(UI.fmtCode(v.code)) + '</b></div>' +
+          '<div class="kh-qr">' + UI.qrSvg(url) + '</div>' +
+        '</header>' +
+        '<div class="kh-bar">' +
+          '<div class="kh-count"><b id="kCount">0</b><span id="kCountL">игроков</span></div>' +
+          '<div class="kh-name">' + UI.wordmark('wordmark-sm') + '<span>' + esc(v.title) + '</span></div>' +
+          '<button class="btn kh-start" type="button" id="kStart">Старт</button>' +
+        '</div>' +
+        '<div class="kh-players" id="kPlayers"></div>' +
+        '<div class="net kh-net" id="netStatus"></div>' +
+      '</div>');
+    bindTop(UI.$('.kh .bz-tools'));
+    UI.$('#kStart').addEventListener('click', function () {
+      FX.unlock();
+      if (!Object.keys(s.players).length) { UI.toast('Подождите, пока зайдёт хотя бы один игрок'); return; }
+      H.act({ type: 'start' });
+    });
+    UI.$('#kPlayers').addEventListener('click', function (e) {
+      var c = e.target.closest('[data-pid]');
+      if (!c) return;
+      var pid = c.getAttribute('data-pid'), p = s.players[pid];
+      if (!p) return;
+      UI.confirm('Удалить игрока «' + p.name + '»?', 'Удалить').then(function (ok) {
+        if (ok && s.players[pid]) { if (net) net.sendTo(pid, { t: 'kicked' }); H.act({ type: 'kick', pid: pid }); }
+      });
+    });
+    renderNet();
+  }
+  function updateKLobby(v) {
+    var n = v.players.length;
+    UI.$('#kCount').textContent = String(n);
+    UI.$('#kCountL').textContent = UI.plural(n, 'игрок', 'игрока', 'игроков');
+    UI.patch(UI.$('#kPlayers'), n ? v.players.slice().reverse().map(function (p) {
+      return '<button type="button" class="kh-chip' + (p.on ? '' : ' off') + '" data-pid="' + esc(p.id) + '" title="Нажмите, чтобы удалить">' + UI.avImg(p.av) + '<span>' + esc(p.name) + '</span></button>';
+    }).join('') : '<p class="kh-wait">Ждём игроков…</p>');
+  }
+
+  function buildKGame(v) {
+    UI.screen('k-game',
+      '<div class="kh kh-game">' + tools(v) +
+        '<div class="kh-qbar"><span class="kh-num" id="kNum"></span><h1 id="kText"></h1></div>' +
+        '<div class="kh-mid" id="kMid"></div>' +
+        '<div class="kh-ans" id="kAns"></div>' +
+        '<div class="kh-ctl" id="kCtl"></div>' +
+      '</div>');
+    bindTop(UI.$('.kh .bz-tools'));
+    UI.$('#kCtl').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-k]');
+      if (b) H.act({ type: b.getAttribute('data-k') });
+    });
+  }
+  function ansHtml(q, res) {
+    return q.opts.map(function (o, i) {
+      var cls = res ? (i === q.correct ? ' right' : ' dim') : '';
+      return '<div class="kh-a' + cls + '" style="--kc:' + KCOL[i] + '"><span class="kh-shape">' + SHAPES[i] + '</span><span class="kh-at">' + esc(o) + '</span>' +
+        (res && i === q.correct ? '<span class="kh-ok">✓</span>' : '') + '</div>';
+    }).join('');
+  }
+  function updateKGame(v) {
+    var q = v.q, ph = v.phase;
+    UI.$('.kh-game').setAttribute('data-ph', ph);
+    UI.$('#kNum').textContent = ph === 'board' ? 'Таблица лидеров' : 'Вопрос ' + (v.qi + 1) + ' из ' + v.total;
+    UI.patch(UI.$('#kText'), ph === 'board' ? '' : esc(q ? q.text : ''));
+    var mid = '', ans = '', ctl = '';
+    if (ph === 'get') {
+      mid = '<div class="kh-ready"><div class="kh-ring"><span id="kCount3">3</span></div><p>Приготовьтесь!</p></div>';
+      ctl = '<button class="btn kh-next" data-k="next" type="button">Показать ответы</button>';
+    } else if (ph === 'q') {
+      mid = '<div class="kh-timer"><span id="kTimer">' + Math.ceil((q.remain || 0) / 1000) + '</span></div>' +
+        '<div class="kh-answered"><b>' + q.answered + '</b><span>' + UI.plural(q.answered, 'ответ', 'ответа', 'ответов') + ' из ' + q.need + '</span></div>';
+      ans = ansHtml(q, false);
+      ctl = '<button class="btn kh-skip" data-k="close" type="button">Завершить вопрос</button>';
+    } else if (ph === 'res') {
+      var max = Math.max(1, Math.max.apply(null, q.counts));
+      mid = '<div class="kh-chart">' + q.counts.map(function (n, i) {
+        return '<div class="kh-col' + (i === q.correct ? ' right' : ' dim') + '" style="--kc:' + KCOL[i] + ';--h:' + (n / max) + '">' +
+          '<span class="kh-cn">' + (i === q.correct ? '✓ ' : '') + n + '</span><span class="kh-bar-in"></span><span class="kh-cs">' + SHAPES[i] + '</span></div>';
+      }).join('') + '</div>';
+      ans = ansHtml(q, true);
+      ctl = '<button class="btn kh-next" data-k="next" type="button">' + (v.qi >= v.total - 1 ? 'Итоги' : 'Дальше') + '</button>';
+    } else if (ph === 'board') {
+      mid = '<ol class="kh-board">' + v.players.slice(0, 5).map(function (p, i) {
+        var up = p.last && p.last.prev && p.last.prev > p.place ? '<span class="kh-up">▲ ' + (p.last.prev - p.place) + '</span>' : '';
+        return '<li style="--i:' + i + '"><span class="kh-pl">' + p.place + '</span>' + UI.avImg(p.av) + '<span class="kh-bn">' + esc(p.name) + '</span>' + up +
+          (p.streak >= 2 ? '<span class="kh-streak">🔥' + p.streak + '</span>' : '') + '<b>' + p.score + '</b></li>';
+      }).join('') + '</ol>';
+      ctl = '<button class="btn kh-next" data-k="next" type="button">Дальше</button>';
+    }
+    UI.patch(UI.$('#kMid'), mid);
+    UI.patch(UI.$('#kAns'), ans);
+    UI.patch(UI.$('#kCtl'), ctl);
+  }
+  function kFrame() {
+    if (!s) return;
+    if (s.phase === 'q' && s.cur && s.cur.deadline) {
+      var el = document.getElementById('kTimer');
+      var t = String(Math.max(0, Math.ceil((s.cur.deadline - Date.now()) / 1000)));
+      if (el && el.textContent !== t) el.textContent = t;
+    } else if (s.phase === 'get') {
+      var c3 = document.getElementById('kCount3');
+      var t3 = String(Math.max(1, Math.ceil((s.until - Date.now()) / 1000)));
+      if (c3 && c3.textContent !== t3) c3.textContent = t3;
+    }
+  }
+  function buildKEnd(v) {
+    var P = v.players;
+    var pod = [P[1], P[0], P[2]].map(function (p, k) {
+      if (!p) return '<div class="kp empty"></div>';
+      var place = [2, 1, 3][k];
+      return '<div class="kp kp' + place + '">' + UI.avImg(p.av, 'av kp-av') + '<span class="kp-name">' + esc(p.name) + '</span><span class="kp-score">' + p.score + '</span>' +
+        '<div class="kp-bar"><img src="img/ui/medal' + place + '.webp" alt="' + place + ' место"></div></div>';
+    }).join('');
+    UI.screen('k-end',
+      '<div class="kh kh-end">' + tools(v) +
+        '<h1 class="kh-end-title">' + (P[0] ? 'Победитель: ' + esc(P[0].name) + '!' : 'Игра окончена') + '</h1>' +
+        '<div class="kh-end-row">' +
+          '<div class="kh-podium">' + pod + '</div>' +
+          '<div class="win-video" id="winVideo"></div>' +
+        '</div>' +
+        (P.length > 3 ? '<ol class="kh-rest" start="4">' + P.slice(3, 15).map(function (p) { return '<li>' + UI.avImg(p.av) + '<span>' + esc(p.name) + '</span><b>' + p.score + '</b></li>'; }).join('') + '</ol>' : '') +
+        '<div class="win-actions">' +
+          '<button class="btn bz-primary btn-lg" type="button" id="againBtn">Играть ещё раз</button>' +
+          '<button class="btn bz-secondary" type="button" id="newBtn">Новая игра</button>' +
+          '<button class="btn bz-secondary" type="button" id="homeBtn">На главную</button>' +
+        '</div>' +
+      '</div>');
+    bindTop(UI.$('.kh .bz-tools'));
+    UI.winVideo(UI.$('#winVideo'), s.cfg.winVideo);
     UI.$('#againBtn').addEventListener('click', function () { H.act({ type: 'restart' }); });
     UI.$('#newBtn').addEventListener('click', function () { H.clearSave(); closePlayers(); s = null; H.stop(); UI.setup(); });
     UI.$('#homeBtn').addEventListener('click', function () { H.clearSave(); closePlayers(); s = null; H.stop(); UI.home(); });

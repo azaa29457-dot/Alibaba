@@ -7,7 +7,15 @@
   E.POINTS = { 1: 10, 2: 15, 3: 20 };
   E.TEAM_COLORS = ['#FF3D68', '#2FB8FF', '#8BE04E', '#FFC23D'];
   E.TEAM_NAMES = ['Ньютоны', 'Кванты', 'Атомы', 'Протоны', 'Галилейцы', 'Паскали', 'Джоули', 'Молекулы', 'Ракеты', 'Магниты', 'Импульсы', 'Электроны'];
-  E.AVATARS = ['🧲', '⚛️', '🔭', '🚀', '🪐', '💡', '🔬', '⚙️', '🌡️', '🧪', '🛰️', '☄️', '🔋', '🌈', '🌋', '❄️'];
+  /* Аватарки-животные (картинки в img/av) */
+  E.AVATARS = ['dragon', 'lion', 'tiger', 'giraffe', 'fox', 'panda', 'monkey', 'unicorn', 'frog', 'penguin', 'koala', 'cat',
+    'dog', 'rabbit', 'bear', 'elephant', 'owl', 'shark', 'octopus', 'turtle', 'hamster', 'zebra', 'wolf', 'dino',
+    'chick', 'pig', 'cow', 'horse', 'butterfly', 'bee', 'ladybug', 'crab', 'whale', 'dolphin', 'flamingo', 'peacock'];
+  E.AVATAR_NAMES = { dragon: 'Дракон', lion: 'Лев', tiger: 'Тигр', giraffe: 'Жираф', fox: 'Лиса', panda: 'Панда', monkey: 'Обезьяна',
+    unicorn: 'Единорог', frog: 'Лягушка', penguin: 'Пингвин', koala: 'Коала', cat: 'Кот', dog: 'Пёс', rabbit: 'Кролик', bear: 'Медведь',
+    elephant: 'Слон', owl: 'Сова', shark: 'Акула', octopus: 'Осьминог', turtle: 'Черепаха', hamster: 'Хомяк', zebra: 'Зебра', wolf: 'Волк', dino: 'Динозавр',
+    chick: 'Цыплёнок', pig: 'Поросёнок', cow: 'Корова', horse: 'Лошадь', butterfly: 'Бабочка', bee: 'Пчела', ladybug: 'Божья коровка', crab: 'Краб',
+    whale: 'Кит', dolphin: 'Дельфин', flamingo: 'Фламинго', peacock: 'Павлин' };
   E.FREQ = { low: 0.15, mid: 0.25, high: 0.35 };
   E.TILE_COLORS = 8;
   E.THEMES = ['violet', 'space', 'ocean', 'sunset', 'blueprint'];

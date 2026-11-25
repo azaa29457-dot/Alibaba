@@ -12,6 +12,10 @@
     { id: 'violet', name: 'Фиолетовый' }, { id: 'space', name: 'Космос' }, { id: 'ocean', name: 'Океан' },
     { id: 'sunset', name: 'Закат' }, { id: 'blueprint', name: 'Тетрадь' }
   ];
+  UI.avImg = function (av, cls) {
+    var id = E.AVATARS.indexOf(av) >= 0 ? av : 'cat';
+    return '<img class="' + (cls || 'av') + '" src="img/av/' + id + '.webp" alt="' + UI.esc(E.AVATAR_NAMES[id] || '') + '" draggable="false">';
+  };
   UI.applyTheme = function (t) {
     if (!UI.THEMES.some(function (x) { return x.id === t; })) t = 'violet';
     document.body.setAttribute('data-theme', t);
@@ -24,6 +28,39 @@
     if (m) return '<iframe src="https://www.youtube-nocookie.com/embed/' + m[1] + '?autoplay=1&rel=0&playsinline=1&modestbranding=1" title="Видео победы" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>';
     if (/^https?:\/\/.+\.(mp4|webm|ogg)(\?.*)?$/i.test(url)) return '<video src="' + UI.esc(url) + '" autoplay playsinline controls></video>';
     return '';
+  };
+  /* 20 смешных зацикленных роликов для победы (GIPHY). Каждый раз выбирается случайный. */
+  UI.WIN_GIFS = ['125E8v90blHqtr4HrB', 'S9r695TxMZ59xw301A', 'TbRkubcqlgBksEqMv4', '7xqRFGrGcC1UgZ6jUk', 'C3AjhNlO4SAtSNdAmY',
+    'FM57qpxeflq5Woi0Bj', 'CLJObmqmzxa1N6GAxB', 'xPSItdDHDPercnHGdx', 'sISX1icp5cE2Q6trd7', 'xCA3qbBcipx6iH3hBt',
+    'bOXnd3kig533u93OND', 'c5RzZOHPgry80', 'KCT1Hh7yIOlIxgIZi9', 'Ga0gHvT84m3yTE8lIp', 'd77o7i3tHnKda',
+    'yScooNo2jY6vQ8Vx8d', 'A0Zt7yuDULiy4ofmVD', 'oA6DW7rbHZ6hy', 'BMR4cgypuglVu', 'zFy8BA6xYRASTJS1De'];
+  UI.dancersHtml = function (list) {
+    return '<div class="cel-dancers" aria-hidden="true">' + (list || ['dance1', 'party', 'monkey', 'robot', 'unicorn', 'cool', 'dance2']).map(function (n, i) {
+      return '<img src="img/ui/' + n + '.webp" alt="" style="--i:' + i + '">';
+    }).join('') + '</div>';
+  };
+  /* Показывает случайное видео победы по кругу. Если интернета нет — танцующие 3D-персонажи. */
+  UI.winVideo = function (box, custom) {
+    if (!box) return;
+    var emb = UI.videoEmbed(custom);
+    if (emb) { box.innerHTML = emb; return; }
+    var order = E.shuffle(UI.WIN_GIFS.slice()), k = 0, fails = 0;
+    function show() {
+      if (fails >= 4) { box.classList.add('no-video'); box.innerHTML = UI.dancersHtml(); return; }
+      var id = order[k % order.length]; k++;
+      box.classList.remove('no-video');
+      box.innerHTML = '<video autoplay loop muted playsinline preload="auto"></video>' +
+        '<button class="win-shuffle" type="button" aria-label="Другое видео" title="Другое видео">🔀</button><span class="win-credit">GIPHY</span>';
+      var vid = box.querySelector('video'), done = false;
+      function fail() { if (done) return; done = true; clearTimeout(to); fails++; show(); }
+      var to = setTimeout(function () { if (vid.readyState < 2) fail(); }, 7000);
+      vid.addEventListener('error', fail);
+      vid.addEventListener('loadeddata', function () { done = true; clearTimeout(to); fails = 0; });
+      vid.src = 'https://media.giphy.com/media/' + id + '/giphy.mp4';
+      try { var pr = vid.play(); if (pr && pr.catch) pr.catch(function () { }); } catch (e) { }
+      box.querySelector('.win-shuffle').addEventListener('click', function () { done = true; clearTimeout(to); show(); });
+    }
+    show();
   };
   UI.savedTheme = function () { var c = UI.store.get('alibaba.setup', null); return c && c.theme ? c.theme : 'violet'; };
   UI.esc = function (s) {
@@ -285,6 +322,7 @@
     out.powerIds = (out.powerIds || []).filter(function (id) { return E.POWER[id]; });
     if (!out.powerIds.length) out.powerIds = E.PRESETS.classic.slice();
     if ([2, 3, 4].indexOf(out.teamCount) < 0) out.teamCount = 2;
+    if (out.mode !== 'screen') out.mode = 'kahoot';
     return out;
   }
   function saveCfg() { UI.store.set('alibaba.setup', S.cfg); }
@@ -432,11 +470,14 @@
       teamInputs += '<label class="team-input" style="--tc:' + E.TEAM_COLORS[i] + '"><span class="dot" aria-hidden="true"></span>' +
         '<span class="sr-only">Команда ' + (i + 1) + '</span><input type="text" maxlength="24" data-team="' + i + '" value="' + UI.esc(c.teams[i]) + '"></label>';
     }
-    var modes = [['screen', 'Один экран'], ['phones', 'Телефоны']].map(function (m) {
+    var isK = c.mode === 'kahoot';
+    var modes = [['screen', 'Один экран', 'screen'], ['kahoot', 'Телефоны', 'phones']].map(function (m) {
       var on = c.mode === m[0];
       return '<button type="button" role="radio" aria-checked="' + on + '" class="mode' + (on ? ' on' : '') + '" data-mode="' + m[0] + '">' +
-        '<img src="img/ui/' + m[0] + '.webp" alt="" draggable="false"><b>' + m[1] + '</b></button>';
+        '<img src="img/ui/' + m[2] + '.webp" alt="" draggable="false"><b>' + m[1] + '</b></button>';
     }).join('');
+    var timers = isK ? [10, 20, 30, 60] : [0, 20, 30, 45, 60];
+    if (timers.indexOf(c.timer) < 0) c.timer = isK ? 20 : 30;
     var themes = UI.THEMES.map(function (t) {
       var on = c.theme === t.id;
       return '<button type="button" role="radio" aria-checked="' + on + '" class="theme-sw th-' + t.id + (on ? ' on' : '') + '" data-theme-pick="' + t.id + '">' +
@@ -450,17 +491,16 @@
     return chosenHeader() +
       '<div class="settings">' +
         row('Режим', '<div class="modes" role="radiogroup">' + modes + '</div>') +
-        row('Команды', '<div class="row-gap">' + seg('teamCount', [{ v: 2, t: '2' }, { v: 3, t: '3' }, { v: 4, t: '4' }], c.teamCount) +
+        (isK ? '' : row('Команды', '<div class="row-gap">' + seg('teamCount', [{ v: 2, t: '2' }, { v: 3, t: '3' }, { v: 4, t: '4' }], c.teamCount) +
           '<button type="button" class="dice-btn" id="randNames" aria-label="Случайные названия" title="Случайные названия"><img src="img/ui/dice.webp" alt=""></button></div>' +
-          '<div class="team-inputs">' + teamInputs + '</div>') +
+          '<div class="team-inputs">' + teamInputs + '</div>')) +
         row('Вопросы', seg('count', opts.map(function (n) { return { v: n, t: String(n) }; }), c.count)) +
-        row('Таймер', seg('timer', [{ v: 0, t: 'Нет' }, { v: 20, t: '20 с' }, { v: 30, t: '30 с' }, { v: 45, t: '45 с' }, { v: 60, t: '60 с' }], c.timer)) +
+        row('Таймер', seg('timer', timers.map(function (n) { return { v: n, t: n ? n + ' с' : 'Нет' }; }), c.timer)) +
         row('Фон', '<div class="themes" role="radiogroup">' + themes + '</div>') +
-        row('Видео победы', '<input type="url" class="url-input" id="winVideo" placeholder="Ссылка на YouTube" value="' + UI.esc(c.winVideo || '') + '">') +
-        row('Бонусы', '<label class="switch"><input type="checkbox" id="powerOn"' + (c.powerOn ? ' checked' : '') + '><span class="sw" aria-hidden="true"></span><span class="sr-only">Бонусы</span></label>') +
+        (isK ? '' : row('Бонусы', '<label class="switch"><input type="checkbox" id="powerOn"' + (c.powerOn ? ' checked' : '') + '><span class="sw" aria-hidden="true"></span><span class="sr-only">Бонусы</span></label>') +
         (c.powerOn ?
           row('Частота', seg('freq', [{ v: 'low', t: 'Мало' }, { v: 'mid', t: 'Средне' }, { v: 'high', t: 'Много' }], c.freq)) +
-          row('Power-ups', '<div class="pws">' + pws + '</div><button type="button" class="btn btn-ghost btn-small" data-preset="all">Выбрать все</button>', 'tall') : '') +
+          row('Power-ups', '<div class="pws">' + pws + '</div><button type="button" class="btn btn-ghost btn-small" data-preset="all">Выбрать все</button>', 'tall') : '')) +
       '</div>';
   }
 
