@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Alibaba — командная викторина для урока</title>
+  <meta name="description" content="Командная викторина в стиле игрового шоу: плитки, очки за сложность, бонусы. Играйте на большом экране или с телефонов по коду.">
+  <meta name="theme-color" content="#1538D8">
+  <meta property="og:title" content="Alibaba — командная викторина">
+  <meta property="og:description" content="Делитесь на команды, открывайте плитки, отвечайте и ловите бонусы.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231538D8'/%3E%3Crect x='10' y='12' width='44' height='40' rx='10' fill='%23FFD23F'/%3E%3Ctext x='32' y='43' font-family='Arial Black,Arial' font-weight='900' font-size='28' text-anchor='middle' fill='%230E1A4F'%3EA%3C/text%3E%3C/svg%3E">
+  <link rel="preload" href="fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/onest-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app"></div>
+  <noscript><p style="padding:2rem;color:#fff;font:18px sans-serif">Для игры нужен включённый JavaScript.</p></noscript>
+
+  <script src="js/core.js"></script>
+
+  <!-- ===== ПРЕДМЕТЫ =====
+       Каждый предмет — отдельный файл в папке data.
+       Чтобы добавить предмет: скопируйте data/_shablon.js, заполните вопросы
+       и добавьте ниже ещё одну строку вида:
+       <script src="data/имя-файла.js"></script>                           -->
+  <script src="data/physics-7.js"></script>
+  <!-- ===== конец списка предметов ===== -->
+
+  <script src="vendor/qrcode.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/net.js"></script>
+  <script src="js/fx.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/host.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
