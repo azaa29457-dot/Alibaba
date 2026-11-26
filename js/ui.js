@@ -244,7 +244,7 @@
             '</form>' +
             '<p class="form-err" id="joinErr" role="alert"></p>' +
             '<div class="hero-actions">' +
-              (phone ? '<p class="phone-note">Создать игру можно только с компьютера. С телефона — только войти по коду.</p>' : '<button class="btn btn-white btn-lg" id="createBtn" type="button">Создать игру</button>') +
+              (phone ? '' : '<button class="btn btn-white btn-lg" id="createBtn" type="button">Создать игру</button>') +
               (plSave ? '<button class="btn btn-ghost" type="button" id="rejoinBtn">Вернуться в игру ' + UI.esc(UI.fmtCode(plSave.code)) + '</button>' : '') +
             '</div>' +
             '<ul class="hero-facts">' +
@@ -365,7 +365,7 @@
   function subjectById(id) { return FB.subjects.filter(function (x) { return x.id === id; })[0] || null; }
 
   UI.setup = function (startStep, preselect) {
-    if (UI.isPhone()) { UI.home(); UI.toast('Создать игру можно только с компьютера'); return; }
+    if (UI.isPhone()) { UI.home(); return; }
     S = {
       step: startStep || 1,
       subjectId: FB.subjects.length === 1 ? FB.subjects[0].id : null,
