@@ -194,7 +194,7 @@
         return {
           id: p.id, name: p.name, av: p.av, score: p.score, on: !!p.online, place: p._place, streak: p.streak || 0,
           answered: !!(s.cur && s.cur.ans && s.cur.ans[p.id]),
-          last: lr ? { ok: lr.ok, pts: lr.pts, opt: lr.opt, prev: lr.prev, place: lr.place } : null
+          last: lr ? { ok: lr.ok, pts: lr.pts, opt: lr.opt, prev: lr.prev, place: lr.place, t: lr.t } : null
         };
       })
     };

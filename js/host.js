@@ -29,6 +29,7 @@
 
   /* ---------- Запуск ---------- */
   H.create = function (cfg) {
+    if (UI.isPhone()) { UI.home(); return; }
     H.stop();
     if (cfg.mode === 'phones' || cfg.mode === 'kahoot') cfg.code = FB.Net.makeCode();
     s = cfg.mode === 'kahoot' ? FB.Kahoot.create(cfg, Date.now()) : E.createGame(cfg, Date.now());
@@ -36,6 +37,7 @@
     begin(false);
   };
   H.resume = function () {
+    if (UI.isPhone()) { UI.home(); return; }
     var g = UI.store.get('alibaba.host', null);
     if (!g || !g.s) { UI.home(); return; }
     H.stop();
@@ -451,7 +453,7 @@
   }
   function buildGame(v) {
     var n = v.tiles.length;
-    var cols = n <= 9 ? 3 : (n <= 16 ? 4 : (n <= 25 ? 5 : (n <= 36 ? 6 : 7)));
+    var cols = n <= 9 ? 3 : (n <= 24 ? 4 : (n <= 30 ? 5 : 6));
     var rows = Math.ceil(n / cols);
     UI.screen('game',
       '<div class="game bz">' +
@@ -758,12 +760,41 @@
       if (b) H.act({ type: b.getAttribute('data-k') });
     });
   }
+  var ICO_OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ICO_NO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/></svg>';
   function ansHtml(q, res) {
     return q.opts.map(function (o, i) {
-      var cls = res ? (i === q.correct ? ' right' : ' dim') : '';
-      return '<div class="kh-a' + cls + '" style="--kc:' + KCOL[i] + '"><span class="kh-shape">' + SHAPES[i] + '</span><span class="kh-at">' + esc(o) + '</span>' +
-        (res && i === q.correct ? '<span class="kh-ok">✓</span>' : '') + '</div>';
+      var ok = res && i === q.correct;
+      var cls = res ? (ok ? ' right' : ' dim') : '';
+      return '<div class="kh-a' + cls + '" style="--kc:' + KCOL[i] + ';--i:' + i + '"><span class="kh-shape">' + SHAPES[i] + '</span><span class="kh-at">' + esc(o) + '</span>' +
+        (res ? '<span class="kh-mark">' + (ok ? ICO_OK : ICO_NO) + '</span>' : '') + '</div>';
     }).join('');
+  }
+  function fmtSec(ms) { return (Math.round(ms / 100) / 10).toFixed(1).replace('.', ',') + ' с'; }
+  function resHtml(v) {
+    var q = v.q, total = 0, max = 1;
+    q.counts.forEach(function (n) { total += n; if (n > max) max = n; });
+    var right = q.counts[q.correct] || 0;
+    var pct = total ? Math.round(right / total * 100) : 0;
+    var fast = null;
+    v.players.forEach(function (p) {
+      if (p.last && p.last.ok && p.last.t != null && (!fast || p.last.t < fast.last.t)) fast = p;
+    });
+    var chart = '<div class="kr-chart">' + q.counts.map(function (n, i) {
+      var ok = i === q.correct;
+      return '<div class="kr-col' + (ok ? ' right' : '') + '" style="--kc:' + KCOL[i] + ';--h:' + (n / max).toFixed(3) + ';--i:' + i + '">' +
+        '<span class="kr-n">' + (ok ? '<i class="kr-ok">' + ICO_OK + '</i>' : '') + '<b>' + n + '</b></span>' +
+        '<span class="kr-bar"></span>' +
+        '<span class="kr-base">' + SHAPES[i] + '</span></div>';
+    }).join('') + '</div>';
+    var stat = '<div class="kr-card kr-stat">' +
+        '<div class="kr-ring" style="--p:' + pct + '"><b>' + pct + '%</b></div>' +
+        '<p><b>' + right + ' из ' + total + '</b>' + (total ? 'ответили верно' : 'никто не ответил') + '</p>' +
+      '</div>';
+    var quick = fast
+      ? '<div class="kr-card kr-fast">' + UI.avImg(fast.av) + '<p><span>Быстрее всех</span><b>' + esc(fast.name) + '</b><em>' + fmtSec(fast.last.t) + ' · +' + fast.last.pts + '</em></p></div>'
+      : '<div class="kr-card kr-fast kr-none"><p><span>Быстрее всех</span><b>—</b><em>верных ответов нет</em></p></div>';
+    return '<div class="kr">' + stat + chart + quick + '</div>';
   }
   function updateKGame(v) {
     var q = v.q, ph = v.phase;
@@ -780,11 +811,7 @@
       ans = ansHtml(q, false);
       ctl = '<button class="btn kh-skip" data-k="close" type="button">Завершить вопрос</button>';
     } else if (ph === 'res') {
-      var max = Math.max(1, Math.max.apply(null, q.counts));
-      mid = '<div class="kh-chart">' + q.counts.map(function (n, i) {
-        return '<div class="kh-col' + (i === q.correct ? ' right' : ' dim') + '" style="--kc:' + KCOL[i] + ';--h:' + (n / max) + '">' +
-          '<span class="kh-cn">' + (i === q.correct ? '✓ ' : '') + n + '</span><span class="kh-bar-in"></span><span class="kh-cs">' + SHAPES[i] + '</span></div>';
-      }).join('') + '</div>';
+      mid = resHtml(v);
       ans = ansHtml(q, true);
       ctl = '<button class="btn kh-next" data-k="next" type="button">' + (v.qi >= v.total - 1 ? 'Итоги' : 'Дальше') + '</button>';
     } else if (ph === 'board') {

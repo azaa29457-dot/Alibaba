@@ -116,7 +116,11 @@
   };
 
   function makeTiles(cfg) {
-    var qs = E.pickQuestions(cfg.topicKeys, cfg.count);
+    // count — всего плиток на поле (как в Baamboozle: 16 или 24); бонусы входят в это число
+    var p = cfg.powerups, k = 0;
+    var powersOn = !!(p && p.on && p.ids && p.ids.length);
+    if (powersOn) k = Math.max(1, Math.round(cfg.count * (E.FREQ[p.freq] || E.FREQ.mid)));
+    var qs = E.pickQuestions(cfg.topicKeys, Math.max(1, cfg.count - k));
     var tiles = qs.map(function (x) {
       var order = shuffle([0, 1, 2, 3]);
       return {
@@ -125,9 +129,7 @@
         correct: order.indexOf(0)
       };
     });
-    var p = cfg.powerups;
-    if (p && p.on && p.ids && p.ids.length && tiles.length) {
-      var k = Math.max(1, Math.round(tiles.length * (E.FREQ[p.freq] || E.FREQ.mid)));
+    if (powersOn && tiles.length) {
       var bag = [];
       for (var i = 0; i < k; i++) {
         if (!bag.length) bag = shuffle(p.ids.slice());

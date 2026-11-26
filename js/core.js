@@ -53,6 +53,7 @@
       if (!topics.length) { console.warn('[Alibaba] Предмет "' + subject.title + '" пропущен: нет тем'); return; }
       FB.subjects.push({
         id: String(subject.id), title: clean(subject.title), grade: clean(subject.grade),
+        group: subject.group === 'extra' ? 'extra' : 'school',
         icon: subject.icon || '📚', img: subject.img ? String(subject.img) : '', color: subject.color || '#2FB8FF', topics: topics
       });
     } catch (e) {

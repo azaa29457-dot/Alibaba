@@ -16,6 +16,13 @@
     var id = E.AVATARS.indexOf(av) >= 0 ? av : 'cat';
     return '<img class="' + (cls || 'av') + '" src="img/av/' + id + '.webp" alt="' + UI.esc(E.AVATAR_NAMES[id] || '') + '" draggable="false">';
   };
+  /* Телефон: только вход в игру по коду, создавать игры нельзя */
+  UI.isPhone = function () {
+    var ua = navigator.userAgent || '';
+    var mobileUA = /Android.+Mobile|iPhone|iPod|Windows Phone|Mobile Safari/i.test(ua) && !/iPad|Tablet/i.test(ua);
+    var narrow = root.matchMedia && root.matchMedia('(max-width: 700px)').matches;
+    return mobileUA || narrow;
+  };
   UI.applyTheme = function (t) {
     if (!UI.THEMES.some(function (x) { return x.id === t; })) t = 'violet';
     document.body.setAttribute('data-theme', t);
@@ -56,6 +63,9 @@
       var to = setTimeout(function () { if (vid.readyState < 2) fail(); }, 7000);
       vid.addEventListener('error', fail);
       vid.addEventListener('loadeddata', function () { done = true; clearTimeout(to); fails = 0; });
+      vid.addEventListener('loadedmetadata', function () {
+        if (vid.videoWidth && vid.videoHeight) box.style.setProperty('--var', (vid.videoWidth / vid.videoHeight).toFixed(4));
+      });
       vid.src = 'https://media.giphy.com/media/' + id + '/giphy.mp4';
       try { var pr = vid.play(); if (pr && pr.catch) pr.catch(function () { }); } catch (e) { }
       box.querySelector('.win-shuffle').addEventListener('click', function () { done = true; clearTimeout(to); show(); });
@@ -165,14 +175,27 @@
       '<div class="hb-pop">+20</div>' +
     '</div>';
   }
+  UI.GROUPS = [['school', 'Школьная программа'], ['extra', 'Дополнительные курсы']];
+  var libSubj = 'all';
+  function libChips() {
+    return '<div class="lib-chips" id="libChips" role="tablist" aria-label="Предметы">' +
+      [['all', 'Все предметы']].concat(FB.subjects.map(function (s) { return [s.id, s.title]; })).map(function (c) {
+        return '<button type="button" role="tab" class="lib-chip' + (c[0] === libSubj ? ' on' : '') + '" aria-selected="' + (c[0] === libSubj) + '" data-lib="' + UI.esc(c[0]) + '">' + UI.esc(c[1]) + '</button>';
+      }).join('') + '</div>';
+  }
   function homeTopicCards(query) {
-    var list = [];
     if (query && query.trim()) {
-      list = searchTopics(query, null).map(function (r) { return { s: r.s, t: r.t }; });
-    } else {
-      FB.subjects.forEach(function (s) { s.topics.forEach(function (t) { list.push({ s: s, t: t }); }); });
+      var found = searchTopics(query, null).map(function (r) { return { s: r.s, t: r.t }; });
+      if (!found.length) return '<p class="empty">Ничего не нашлось по запросу «' + UI.esc(query) + '». Попробуйте другое слово, например «давление», «Абылай» или «Past Simple».</p>';
+      return topicCardsHtml(found);
     }
-    if (!list.length) return '<p class="empty">Ничего не нашлось по запросу «' + UI.esc(query) + '». Попробуйте другое слово, например «давление» или «скорость».</p>';
+    var subs = FB.subjects.filter(function (s) { return libSubj === 'all' || s.id === libSubj; });
+    return subs.map(function (s) {
+      return '<h3 class="lib-subj">' + UI.logo(s, 'h-logo') + '<span>' + UI.esc(s.title) + '</span>' + (s.grade ? '<small>' + UI.esc(s.grade) + '</small>' : '') + '</h3>' +
+        topicCardsHtml(s.topics.map(function (t) { return { s: s, t: t }; }));
+    }).join('');
+  }
+  function topicCardsHtml(list) {
     return '<div class="lib">' + list.map(function (x, i) {
       var key = FB.topicKey(x.s.id, x.t.id);
       return '<button type="button" class="game-card gc' + (i % 8) + '" data-play="' + UI.esc(key) + '">' +
@@ -192,17 +215,19 @@
     var topicCount = FB.subjects.reduce(function (a, s) { return a + s.topics.length; }, 0);
     var qCount = FB.subjects.reduce(function (a, s) { return a + s.topics.reduce(function (b, t) { return b + t.q.length; }, 0); }, 0);
     UI.applyTheme(UI.savedTheme());
+    var phone = UI.isPhone();
+    if (phone) hostSave = null;
     var html =
-      '<div class="home">' +
+      '<div class="home' + (phone ? ' is-phone' : '') + '">' +
         '<header class="nav">' +
           '<a class="nav-logo" href="#" data-nav="top" aria-label="Alibaba — на главную">' + UI.wordmark('wordmark-nav') + '</a>' +
           '<nav class="nav-links" aria-label="Разделы">' +
-            '<a href="#topics" data-nav="topics">Темы</a>' +
+            (phone ? '' : '<a href="#topics" data-nav="topics">Темы</a>') +
             '<a href="#how" data-nav="how">Как играть</a>' +
           '</nav>' +
           '<div class="nav-cta">' +
             '<button type="button" class="btn btn-ghost btn-small" data-nav="code">Ввести код</button>' +
-            '<button type="button" class="btn btn-yellow btn-small" id="createBtnNav">Создать игру</button>' +
+            (phone ? '' : '<button type="button" class="btn btn-yellow btn-small" id="createBtnNav">Создать игру</button>') +
           '</div>' +
         '</header>' +
         (hostSave ? '<div class="resume-bar"><span>У вас есть незаконченная игра «' + UI.esc(hostSave.title) + '» — осталось ' + hostSave.left + ' ' + UI.plural(hostSave.left, 'плитка', 'плитки', 'плиток') + '.</span>' +
@@ -219,7 +244,7 @@
             '</form>' +
             '<p class="form-err" id="joinErr" role="alert"></p>' +
             '<div class="hero-actions">' +
-              '<button class="btn btn-white btn-lg" id="createBtn" type="button">Создать игру</button>' +
+              (phone ? '<p class="phone-note">Создать игру можно только с компьютера. С телефона — только войти по коду.</p>' : '<button class="btn btn-white btn-lg" id="createBtn" type="button">Создать игру</button>') +
               (plSave ? '<button class="btn btn-ghost" type="button" id="rejoinBtn">Вернуться в игру ' + UI.esc(UI.fmtCode(plSave.code)) + '</button>' : '') +
             '</div>' +
             '<ul class="hero-facts">' +
@@ -230,15 +255,15 @@
           '</div>' +
           '<div class="hero-art">' + heroBoard() + '</div>' +
         '</section>' +
-        '<section class="lib-wrap" id="topics">' +
+        (phone ? '' : '<section class="lib-wrap" id="topics">' +
           '<div class="lib-head">' +
             '<h2 class="sec-h">Выберите тему и играйте</h2>' +
             '<div class="search lib-search">' + UI.SEARCH_ICO +
               '<input type="search" id="homeSearch" placeholder="Поиск по темам и вопросам" aria-label="Поиск темы"></div>' +
           '</div>' +
-          (subjCount > 1 ? '' : '<p class="lib-sub">' + UI.esc(FB.subjects[0].title + ', ' + FB.subjects[0].grade) + ' — ' + topicCount + ' ' + UI.plural(topicCount, 'тема', 'темы', 'тем') + ' по 20 вопросов. Нажмите на тему, чтобы сразу настроить игру.</p>') +
+          (subjCount > 1 ? libChips() : '') +
           '<div id="libArea">' + homeTopicCards('') + '</div>' +
-        '</section>' +
+        '</section>') +
         '<section class="how-wrap" id="how">' +
           '<h2 class="sec-h">Как играть</h2>' +
           '<ol class="how">' +
@@ -269,8 +294,10 @@
     var rj = UI.$('#rejoinBtn');
     if (rj) rj.addEventListener('click', function () { FB.FX.unlock(); FB.Player.start(plSave.code); });
     function create() { FB.FX.unlock(); UI.setup(); }
-    UI.$('#createBtn').addEventListener('click', create);
-    UI.$('#createBtnNav').addEventListener('click', create);
+    if (!phone) {
+      UI.$('#createBtn').addEventListener('click', create);
+      UI.$('#createBtnNav').addEventListener('click', create);
+    }
     UI.$('.nav').addEventListener('click', function (e) {
       var a = e.target.closest('[data-nav]');
       if (!a) return;
@@ -280,8 +307,17 @@
       else if (k === 'code') { root.scrollTo({ top: 0, behavior: 'smooth' }); setTimeout(function () { input.focus(); }, 250); }
       else { var el = document.getElementById(k); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     });
-    UI.$('#homeSearch').addEventListener('input', function (e) { UI.$('#libArea').innerHTML = homeTopicCards(e.target.value); });
-    UI.$('#libArea').addEventListener('click', function (e) {
+    if (!phone) UI.$('#homeSearch').addEventListener('input', function (e) { UI.$('#libArea').innerHTML = homeTopicCards(e.target.value); });
+    var chips = UI.$('#libChips');
+    if (chips) chips.addEventListener('click', function (e) {
+      var c = e.target.closest('[data-lib]');
+      if (!c) return;
+      libSubj = c.getAttribute('data-lib');
+      UI.$$('.lib-chip', chips).forEach(function (b) { var on = b === c; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+      UI.$('#homeSearch').value = '';
+      UI.$('#libArea').innerHTML = homeTopicCards('');
+    });
+    if (!phone) UI.$('#libArea').addEventListener('click', function (e) {
       var c = e.target.closest('[data-play]');
       if (!c) return;
       FB.FX.unlock();
@@ -309,7 +345,7 @@
 
   var DEFAULT_CFG = {
     mode: 'screen', teamCount: 2, teams: ['Команда 1', 'Команда 2', 'Команда 3', 'Команда 4'],
-    count: 20, timer: 30, theme: 'violet', winVideo: '',
+    count: 16, timer: 30, theme: 'violet', winVideo: '',
     powerOn: true, freq: 'mid', powerIds: E.PRESETS.classic.slice()
   };
   var S = null;
@@ -329,6 +365,7 @@
   function subjectById(id) { return FB.subjects.filter(function (x) { return x.id === id; })[0] || null; }
 
   UI.setup = function (startStep, preselect) {
+    if (UI.isPhone()) { UI.home(); UI.toast('Создать игру можно только с компьютера'); return; }
     S = {
       step: startStep || 1,
       subjectId: FB.subjects.length === 1 ? FB.subjects[0].id : null,
@@ -416,10 +453,15 @@
   }
   function subjectArea() {
     if (S.query.trim()) return topicResults(S.query, null);
-    return '<div class="lib subjects-lib">' + FB.subjects.map(function (s, i) {
-      return gameCard('data-subject="' + UI.esc(s.id) + '"', i + 4, UI.logo(s, 'gc-logo'), s.title, s.grade,
-        s.topics.length + ' ' + UI.plural(s.topics.length, 'тема', 'темы', 'тем'));
-    }).join('') + '</div>';
+    var multi = UI.GROUPS.filter(function (g) { return FB.subjects.some(function (s) { return s.group === g[0]; }); }).length > 1;
+    return UI.GROUPS.map(function (g) {
+      var list = FB.subjects.filter(function (s) { return s.group === g[0]; });
+      if (!list.length) return '';
+      return (multi ? '<h3 class="grp-h">' + g[1] + '</h3>' : '') + '<div class="lib subjects-lib">' + list.map(function (s) {
+        return gameCard('data-subject="' + UI.esc(s.id) + '"', FB.subjects.indexOf(s) + 4, UI.logo(s, 'gc-logo'), s.title, s.grade,
+          s.topics.length + ' ' + UI.plural(s.topics.length, 'тема', 'темы', 'тем'));
+      }).join('') + '</div>';
+    }).join('');
   }
 
   /* ---- Шаг 2: тема ---- */
@@ -462,16 +504,22 @@
   function stepSettings() {
     var c = S.cfg;
     var avail = E.availableCount(S.selected);
-    var opts = [10, 15, 20, 25, 30].filter(function (n) { return n <= avail; });
-    if (avail < 30 && opts.indexOf(avail) < 0) opts.push(avail);
-    if (opts.indexOf(c.count) < 0) c.count = opts.filter(function (n) { return n <= 20; }).pop() || opts[0];
+    var opts;
+    if (c.mode === 'kahoot') {
+      opts = [10, 15, 20, 25, 30].filter(function (n) { return n <= avail; });
+      if (avail < 30 && opts.indexOf(avail) < 0) opts.push(avail);
+      if (opts.indexOf(c.count) < 0) c.count = opts.filter(function (n) { return n <= 20; }).pop() || opts[0];
+    } else {
+      opts = [16, 24]; // поле 4 × 4 или 4 × 6, как в Baamboozle
+      if (opts.indexOf(c.count) < 0) c.count = 16;
+    }
     var teamInputs = '';
     for (var i = 0; i < c.teamCount; i++) {
       teamInputs += '<label class="team-input" style="--tc:' + E.TEAM_COLORS[i] + '"><span class="dot" aria-hidden="true"></span>' +
         '<span class="sr-only">Команда ' + (i + 1) + '</span><input type="text" maxlength="24" data-team="' + i + '" value="' + UI.esc(c.teams[i]) + '"></label>';
     }
     var isK = c.mode === 'kahoot';
-    var modes = [['screen', 'Один экран', 'screen'], ['kahoot', 'Телефоны', 'phones']].map(function (m) {
+    var modes = [['screen', 'Baamboozle', 'screen'], ['kahoot', 'Kahoot', 'phones']].map(function (m) {
       var on = c.mode === m[0];
       return '<button type="button" role="radio" aria-checked="' + on + '" class="mode' + (on ? ' on' : '') + '" data-mode="' + m[0] + '">' +
         '<img src="img/ui/' + m[2] + '.webp" alt="" draggable="false"><b>' + m[1] + '</b></button>';
@@ -593,7 +641,7 @@
     var subtitle = first.subject.title + (first.subject.grade ? ', ' + first.subject.grade : '');
     FB.Host.create({
       mode: c.mode, teams: names, topicKeys: S.selected.slice(),
-      count: Math.min(c.count, avail), timer: c.timer, theme: c.theme, winVideo: c.winVideo,
+      count: c.mode === 'kahoot' ? Math.min(c.count, avail) : c.count, timer: c.timer, theme: c.theme, winVideo: c.winVideo,
       powerups: { on: c.powerOn, freq: c.freq, ids: c.powerIds.slice() },
       title: title, subtitle: subtitle
     });
