@@ -8,6 +8,7 @@
   var K = {};
   K.MAX = 1000;
   K.GET_READY = 3000; // «Приготовьтесь» перед каждым вопросом, мс
+  K.AUTO_NEXT = 3000; // через сколько мс результаты и таблица лидеров листаются сами
 
   K.points = function (ms, timerSec) {
     if (ms < 500) return K.MAX;
@@ -68,6 +69,7 @@
     K.ranking(s).forEach(function (p) { p.lastRes.prev = before[p.id] || null; p.lastRes.place = p._place; });
     s.phase = 'res';
     s.cur.deadline = null;
+    s.until = now + K.AUTO_NEXT;
     ev.push({ type: 'kres' });
   }
 
@@ -99,7 +101,6 @@
           po.last = now;
           if (po.online === !!a.on) return false;
           po.online = !!a.on;
-          maybeClose(s, now, ev);
           return true;
         }
         case 'start':
@@ -108,6 +109,7 @@
         case 'tick':
           if (s.phase === 'get' && now >= s.until) { openQuestion(s, now, ev); return true; }
           if (s.phase === 'q' && now >= s.cur.deadline) { close(s, now, ev); return true; }
+          if ((s.phase === 'res' || s.phase === 'board') && s.until && now >= s.until) return goNext(s, now, ev);
           return false;
         case 'answer': {
           if (s.phase !== 'q') return false;
@@ -124,13 +126,7 @@
           close(s, now, ev);
           return true;
         case 'next':
-          if (s.phase === 'res') {
-            if (s.qi >= s.qs.length - 1) { s.phase = 'end'; s.cur = null; ev.push({ type: 'end' }); return true; }
-            s.phase = 'board'; ev.push({ type: 'kboard' }); return true;
-          }
-          if (s.phase === 'board') return nextQuestion(s, now, ev);
-          if (s.phase === 'get') { openQuestion(s, now, ev); return true; }
-          return false;
+          return goNext(s, now, ev);
         case 'end':
           if (s.phase === 'end') return false;
           s.phase = 'end'; s.cur = null; ev.push({ type: 'end' });
@@ -157,10 +153,20 @@
     ev.push({ type: 'kget' });
     return true;
   }
+  // Вопрос заканчивается, только когда ответили ВСЕ игроки, или по таймеру, или когда ведущий нажал «Завершить вопрос»
+  function goNext(s, now, ev) {
+    if (s.phase === 'res') {
+      if (s.qi >= s.qs.length - 1) { s.phase = 'end'; s.cur = null; s.until = null; ev.push({ type: 'end' }); return true; }
+      s.phase = 'board'; s.until = now + K.AUTO_NEXT; ev.push({ type: 'kboard' }); return true;
+    }
+    if (s.phase === 'board') return nextQuestion(s, now, ev);
+    if (s.phase === 'get') { openQuestion(s, now, ev); return true; }
+    return false;
+  }
   function maybeClose(s, now, ev) {
     if (s.phase !== 'q') return;
-    var on = online(s);
-    if (on.length && on.every(function (p) { return s.cur.ans[p.id]; })) close(s, now, ev);
+    var all = list(s);
+    if (all.length && all.every(function (p) { return s.cur.ans[p.id]; })) close(s, now, ev);
   }
 
   K.left = function (s) { return Math.max(0, s.qs.length - Math.max(0, s.qi + (s.phase === 'lobby' ? 0 : 1))); };
@@ -179,13 +185,14 @@
       kind: 'kahoot', mode: 'kahoot', v: s.v, id: s.id, code: s.code, phase: s.phase,
       title: s.cfg.title, subtitle: s.cfg.subtitle, cfg: { theme: s.cfg.theme, timer: s.cfg.timer },
       qi: s.qi, total: s.qs.length,
+      auto: (s.phase === 'res' || s.phase === 'board') && s.until ? Math.max(0, s.until - now) : null,
       q: showQ ? {
         text: q.text, d: q.d, topic: q.topic,
         opts: s.phase === 'get' ? null : q.opts,
         correct: s.phase === 'res' ? q.correct : null,
         counts: counts,
         answered: s.cur ? Object.keys(s.cur.ans).length : 0,
-        need: online(s).length,
+        need: list(s).length,
         remain: s.phase === 'q' ? Math.max(0, s.cur.deadline - now) : (s.phase === 'get' ? Math.max(0, s.until - now) : null),
         total: s.phase === 'get' ? K.GET_READY : s.cfg.timer * 1000
       } : null,

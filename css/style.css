@@ -1219,3 +1219,33 @@ img.kp-av { width: clamp(56px, 8vh, 84px); height: auto; animation: popIn .6s cu
 .win-video { --mh: 34vh; max-height: var(--mh); width: min(100%, calc(var(--mh) * var(--var, 1.7778))); }
 .ph-win-video { --mh: 56vh; }
 .kh-end .win-video { --mh: 36vh; width: min(520px, 100%, calc(var(--mh) * var(--var, 1.7778))); }
+
+/* Kahoot: «Дальше» нажимается сам через 3 секунды — полоска показывает, сколько осталось */
+.kh-auto { position: relative; overflow: hidden; isolation: isolate; }
+.kh-auto > span { position: relative; z-index: 1; }
+.kh-auto-fill { position: absolute; inset: 0; z-index: 0; background: #C9F0B8; transform: scaleX(0); transform-origin: left center; }
+
+/* ---------- Обычное окно браузера (без F11): всё помещается по высоте ---------- */
+.bz .bz-main { padding-right: clamp(56px, 4.6vw, 72px); }
+.pflip { width: min(clamp(200px, 26vw, 340px), 44vh); }
+@media (max-height: 760px) {
+  .pcard .b-title { margin-bottom: 1.4vh; }
+  .pcard .b-sub { margin-top: 1vh; }
+  .bz-end { padding: clamp(46px, 8vh, 70px) 16px 14px; }
+  .win-card { padding: 12px clamp(14px, 3vw, 30px) 16px; }
+  .win-trophy { width: clamp(64px, 11vh, 110px); margin-top: -52px; }
+  .win-title { font-size: clamp(22px, 4vh, 40px); margin: 0 0 8px; }
+  .win-video { --mh: 26vh; }
+  .win-list { margin: 8px 0 10px; gap: 4px; }
+  .win-list li { padding: 3px 12px 3px 8px; }
+  .win-medal { width: 26px; height: 26px; }
+  .win-actions .btn { padding-top: .5em; padding-bottom: .5em; }
+  .kh-end .win-video { --mh: 30vh; }
+  .kh-podium { height: clamp(220px, 40vh, 400px); }
+}
+@media (max-height: 620px) {
+  .win-video { --mh: 22vh; }
+  .win-list li { font-size: .92rem; }
+  .kh-qbar { margin-top: 8px; padding: 8px 18px 10px; }
+  .kh-a { padding-top: 10px; padding-bottom: 10px; }
+}

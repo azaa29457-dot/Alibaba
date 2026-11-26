@@ -169,6 +169,7 @@
   function tick() {
     if (s && s.kind === 'kahoot') {
       if (s.phase === 'get' && Date.now() >= s.until) { H.act({ type: 'tick' }); return; }
+      if ((s.phase === 'res' || s.phase === 'board') && s.until && Date.now() >= s.until) { H.act({ type: 'tick' }); return; }
       if (s.phase === 'q') {
         var rk = s.cur.deadline - Date.now();
         if (rk <= 0) { H.act({ type: 'tick' }); return; }
@@ -770,6 +771,11 @@
         (res ? '<span class="kh-mark">' + (ok ? ICO_OK : ICO_NO) + '</span>' : '') + '</div>';
     }).join('');
   }
+  // «Дальше» сам нажмётся через несколько секунд — полоска на кнопке показывает, сколько осталось
+  function autoNext(v, label) {
+    if (v.auto == null) return '<button class="btn kh-next" data-k="next" type="button">' + label + '</button>';
+    return '<button class="btn kh-next kh-auto" data-k="next" type="button"><i class="kh-auto-fill" id="kAutoFill"></i><span>' + label + '</span></button>';
+  }
   function fmtSec(ms) { return (Math.round(ms / 100) / 10).toFixed(1).replace('.', ',') + ' с'; }
   function resHtml(v) {
     var q = v.q, total = 0, max = 1;
@@ -813,14 +819,14 @@
     } else if (ph === 'res') {
       mid = resHtml(v);
       ans = ansHtml(q, true);
-      ctl = '<button class="btn kh-next" data-k="next" type="button">' + (v.qi >= v.total - 1 ? 'Итоги' : 'Дальше') + '</button>';
+      ctl = autoNext(v, v.qi >= v.total - 1 ? 'Итоги' : 'Дальше');
     } else if (ph === 'board') {
       mid = '<ol class="kh-board">' + v.players.slice(0, 5).map(function (p, i) {
         var up = p.last && p.last.prev && p.last.prev > p.place ? '<span class="kh-up">▲ ' + (p.last.prev - p.place) + '</span>' : '';
         return '<li style="--i:' + i + '"><span class="kh-pl">' + p.place + '</span>' + UI.avImg(p.av) + '<span class="kh-bn">' + esc(p.name) + '</span>' + up +
           (p.streak >= 2 ? '<span class="kh-streak">🔥' + p.streak + '</span>' : '') + '<b>' + p.score + '</b></li>';
       }).join('') + '</ol>';
-      ctl = '<button class="btn kh-next" data-k="next" type="button">Дальше</button>';
+      ctl = autoNext(v, 'Дальше');
     }
     UI.patch(UI.$('#kMid'), mid);
     UI.patch(UI.$('#kAns'), ans);
@@ -832,6 +838,9 @@
       var el = document.getElementById('kTimer');
       var t = String(Math.max(0, Math.ceil((s.cur.deadline - Date.now()) / 1000)));
       if (el && el.textContent !== t) el.textContent = t;
+    } else if ((s.phase === 'res' || s.phase === 'board') && s.until) {
+      var fill = document.getElementById('kAutoFill');
+      if (fill) fill.style.transform = 'scaleX(' + Math.min(1, Math.max(0, 1 - (s.until - Date.now()) / FB.Kahoot.AUTO_NEXT)).toFixed(3) + ')';
     } else if (s.phase === 'get') {
       var c3 = document.getElementById('kCount3');
       var t3 = String(Math.max(1, Math.ceil((s.until - Date.now()) / 1000)));
