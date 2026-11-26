@@ -270,6 +270,15 @@ code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .92em; 
 @keyframes rise { 0% { opacity: 0; transform: translateY(20px) scale(.6); } 15% { opacity: 1; transform: translateY(0) scale(1.05); } 60% { opacity: 1; transform: translateY(-14px) scale(1); } 85%, 100% { opacity: 0; transform: translateY(-30px); } }
 
 .sec-h { font-family: var(--f-display); font-weight: 900; font-size: clamp(1.5rem, 3vw, 2.3rem); letter-spacing: -.01em; }
+
+/* значок раздела: три картинки тем веером */
+.logo-stack { position: relative; display: inline-block; }
+.gc-logo.logo-stack { width: 132px; }
+.h-logo.logo-stack { width: clamp(92px, 10.5vw, 126px); }
+.logo-stack > img, .logo-stack > i { position: absolute; height: 78%; width: auto; aspect-ratio: 1; object-fit: contain; font-style: normal; font-size: .62em; line-height: 1; display: grid; place-items: center; }
+.logo-stack > :nth-child(1) { left: 0; top: 20%; transform: rotate(-12deg); }
+.logo-stack > :nth-child(2) { left: 50%; top: 0; z-index: 2; transform: translateX(-50%); }
+.logo-stack > :nth-child(3) { right: 0; top: 20%; transform: rotate(12deg); }
 .lib-wrap, .how-wrap { width: min(1240px, calc(100% - 44px)); margin: 0 auto; padding: clamp(20px, 4vh, 40px) 0; }
 .lib-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
 .lib-search { flex: 0 1 420px; margin: 0; }
@@ -811,6 +820,7 @@ code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .92em; 
   .lib { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .gc-art { height: 92px; }
   .gc-logo { width: 58px; height: 58px; font-size: 44px; }
+  .gc-logo.logo-stack { width: 104px; }
   .gc-body { padding: 10px 12px 2px; }
   .gc-t { font-size: .95rem; }
   .gc-play { margin: 8px 12px 12px; }
@@ -1249,3 +1259,7 @@ img.kp-av { width: clamp(56px, 8vh, 84px); height: auto; animation: popIn .6s cu
   .kh-qbar { margin-top: 8px; padding: 8px 18px 10px; }
   .kh-a { padding-top: 10px; padding-bottom: 10px; }
 }
+
+/* Разделы учебника в списке тем */
+#topicArea .sec-h, .lib-sec { margin: 26px 0 8px; font-family: var(--f-display); font-weight: 800; font-size: clamp(1.05rem, 1.8vw, 1.35rem); }
+.lib-sec { margin: 18px 0 8px; font-size: clamp(1rem, 1.5vw, 1.15rem); color: rgba(255, 255, 255, .85); }

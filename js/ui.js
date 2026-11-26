@@ -191,8 +191,9 @@
     }
     var subs = FB.subjects.filter(function (s) { return libSubj === 'all' || s.id === libSubj; });
     return subs.map(function (s) {
+      var secs = UI.sectionsOf(s), wrap = function (ts) { return topicCardsHtml(ts.map(function (t) { return { s: s, t: t }; })); };
       return '<h3 class="lib-subj">' + UI.logo(s, 'h-logo') + '<span>' + UI.esc(s.title) + '</span>' + (s.grade ? '<small>' + UI.esc(s.grade) + '</small>' : '') + '</h3>' +
-        topicCardsHtml(s.topics.map(function (t) { return { s: s, t: t }; }));
+        (secs ? secs.map(function (sec) { return '<h4 class="lib-sec">' + UI.esc(sec.name) + '</h4>' + wrap(sec.topics); }).join('') : wrap(s.topics));
     }).join('');
   }
   function topicCardsHtml(list) {
@@ -338,6 +339,12 @@
     if (item && item.img) return '<img class="' + (cls || 'logo') + '" src="' + UI.esc(item.img) + '" alt="" draggable="false">';
     return '<span class="' + (cls || 'logo') + ' logo-emo" aria-hidden="true">' + ((item && item.icon) || '📘') + '</span>';
   };
+  /* Значок раздела: три картинки его первых тем веером */
+  UI.stackLogo = function (topics, cls) {
+    return '<span class="' + (cls || 'logo') + ' logo-stack" aria-hidden="true">' + topics.slice(0, 3).map(function (t) {
+      return t.img ? '<img src="' + UI.esc(t.img) + '" alt="" draggable="false">' : '<i>' + (t.icon || '📘') + '</i>';
+    }).join('') + '</span>';
+  };
   UI.powerImg = function (id, cls) {
     var p = E.POWER[id];
     return p ? '<img class="' + (cls || 'pw-img') + '" src="' + p.img + '" alt="" draggable="false">' : '';
@@ -472,11 +479,36 @@
       '<div class="search">' + UI.SEARCH_ICO + '<input type="search" id="topicSearch" placeholder="Поиск темы" value="' + UI.esc(S.topicQuery) + '" aria-label="Поиск темы"></div>' +
       '<div id="topicArea">' + topicArea(s) + '</div>';
   }
+  /* Темы, разбитые по разделам учебника (поле section у темы) */
+  UI.sectionsOf = function (s) {
+    if (!s.topics.some(function (t) { return t.section; })) return null;
+    var out = [];
+    s.topics.forEach(function (t) {
+      var last = out[out.length - 1];
+      if (!last || last.name !== t.section) out.push(last = { name: t.section, topics: [] });
+      last.topics.push(t);
+    });
+    return out;
+  };
   function topicArea(s) {
     if (S.topicQuery.trim()) return topicResults(S.topicQuery, s.id);
     var total = s.topics.reduce(function (a, t) { return a + t.q.length; }, 0);
-    return '<div class="lib">' +
-      (s.topics.length > 1 ? gameCard('data-mix="' + UI.esc(s.id) + '"', 0, '<img class="gc-logo" src="img/ui/mix.webp" alt="" draggable="false">', 'Все темы', 'Вперемешку', qn(total)) : '') +
+    var mix = s.topics.length > 1 ? gameCard('data-mix="' + UI.esc(s.id) + '"', 0, '<img class="gc-logo" src="img/ui/mix.webp" alt="" draggable="false">', 'Все темы', 'Вперемешку', qn(total)) : '';
+    var secs = UI.sectionsOf(s);
+    if (secs) {
+      var n = 0;
+      return '<div class="lib">' + mix + '</div>' + secs.map(function (sec, si) {
+        var sum = sec.topics.reduce(function (a, t) { return a + t.q.length; }, 0);
+        return '<h3 class="sec-h">' + UI.esc(sec.name) + '</h3><div class="lib">' +
+          (sec.topics.length > 1 ? gameCard('data-sec="' + UI.esc(s.id) + '|' + si + '"', 0, UI.stackLogo(sec.topics, 'gc-logo'), 'Весь раздел',
+            sec.topics.length + ' ' + UI.plural(sec.topics.length, 'тема', 'темы', 'тем') + ' вперемешку', qn(sum)) : '') +
+          sec.topics.map(function (t) {
+            n++;
+            return gameCard('data-topic="' + UI.esc(FB.topicKey(s.id, t.id)) + '"', n, UI.logo(t, 'gc-logo'), t.title, '', qn(t.q.length));
+          }).join('') + '</div>';
+      }).join('');
+    }
+    return '<div class="lib">' + mix +
       s.topics.map(function (t, i) {
         return gameCard('data-topic="' + UI.esc(FB.topicKey(s.id, t.id)) + '"', i + 1, UI.logo(t, 'gc-logo'), t.title, '', qn(t.q.length));
       }).join('') + '</div>';
@@ -492,14 +524,23 @@
   function row(name, ctl, extraCls) {
     return '<div class="set-row' + (extraCls ? ' ' + extraCls : '') + '"><span class="set-name">' + name + '</span><div class="set-ctl">' + ctl + '</div></div>';
   }
+  /* Что выбрано: одна тема, целый раздел учебника или все темы предмета */
+  function selectionInfo() {
+    var keys = S.selected, first = FB.findTopic(keys[0]);
+    if (keys.length === 1) return { kind: 'one', first: first, title: first.topic.title };
+    var secs = UI.sectionsOf(first.subject) || [], key = keys.slice().sort().join(',');
+    for (var i = 0; i < secs.length; i++) {
+      var sk = secs[i].topics.map(function (t) { return FB.topicKey(first.subject.id, t.id); }).sort().join(',');
+      if (secs[i].topics.length > 1 && sk === key) return { kind: 'section', first: first, title: secs[i].name, sec: secs[i] };
+    }
+    return { kind: 'all', first: first, title: 'Все темы' };
+  }
   function chosenHeader() {
-    var keys = S.selected;
-    var first = FB.findTopic(keys[0]);
-    var mix = keys.length > 1;
-    var logo = mix ? '<img class="h-logo" src="img/ui/mix.webp" alt="">' : UI.logo(first.topic, 'h-logo');
-    var title = mix ? 'Все темы' : first.topic.title;
-    var sub = first.subject.title + (first.subject.grade ? ', ' + first.subject.grade : '');
-    return '<div class="chosen">' + logo + '<span><b>' + UI.esc(title) + '</b><small>' + UI.esc(sub) + '</small></span></div>';
+    var info = selectionInfo(), first = info.first;
+    var logo = info.kind === 'one' ? UI.logo(first.topic, 'h-logo') :
+      info.kind === 'section' ? UI.stackLogo(info.sec.topics, 'h-logo') : '<img class="h-logo" src="img/ui/mix.webp" alt="">';
+    var sub = first.subject.title + (first.subject.grade ? ', ' + first.subject.grade : '') + (info.kind === 'section' ? '. Весь раздел' : '');
+    return '<div class="chosen">' + logo + '<span><b>' + UI.esc(info.title) + '</b><small>' + UI.esc(sub) + '</small></span></div>';
   }
   function stepSettings() {
     var c = S.cfg;
@@ -573,6 +614,11 @@
         S.selected = [key]; S.subjectId = key.split('/')[0]; S.fromSubject = S.step === 2; S.step = 3;
         FB.FX.play('click'); renderSetup(); return;
       }
+      if ((t = e.target.closest('[data-sec]'))) {
+        var parts = t.getAttribute('data-sec').split('|'), ss = subjectById(parts[0]), sec = UI.sectionsOf(ss)[+parts[1]];
+        S.selected = sec.topics.map(function (tp) { return FB.topicKey(ss.id, tp.id); }); S.subjectId = ss.id; S.fromSubject = true; S.step = 3;
+        FB.FX.play('click'); renderSetup(); return;
+      }
       if ((t = e.target.closest('[data-mix]'))) {
         var sub = subjectById(t.getAttribute('data-mix'));
         S.selected = sub.topics.map(function (tp) { return FB.topicKey(sub.id, tp.id); }); S.fromSubject = true; S.step = 3;
@@ -636,8 +682,8 @@
       return;
     }
     var avail = E.availableCount(S.selected);
-    var first = FB.findTopic(S.selected[0]);
-    var title = S.selected.length === 1 ? first.topic.title : first.subject.title + ': все темы';
+    var info = selectionInfo(), first = info.first;
+    var title = info.kind === 'all' ? first.subject.title + ': все темы' : info.title;
     var subtitle = first.subject.title + (first.subject.grade ? ', ' + first.subject.grade : '');
     FB.Host.create({
       mode: c.mode, teams: names, topicKeys: S.selected.slice(),

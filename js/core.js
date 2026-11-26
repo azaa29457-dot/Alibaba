@@ -47,7 +47,8 @@
         if (!qs.length) { console.warn('[Alibaba] Тема "' + t.title + '" пропущена: нет правильных вопросов'); return; }
         topics.push({
           id: String(t.id), title: clean(t.title), icon: t.icon || '📘', img: t.img ? String(t.img) : '',
-          tags: clean(t.tags), q: qs, subjectId: String(subject.id)
+          tags: clean(t.tags), q: qs, subjectId: String(subject.id),
+          section: t.section ? clean(t.section) : ''
         });
       });
       if (!topics.length) { console.warn('[Alibaba] Предмет "' + subject.title + '" пропущен: нет тем'); return; }

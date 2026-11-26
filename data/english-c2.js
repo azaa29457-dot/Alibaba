@@ -1,0 +1,343 @@
+/*
+  Курс: English, C2 Proficiency. Дополнительная программа, не школьная — очень сложные вопросы уровня CPE.
+  group: 'extra' — предмет показывается в разделе «Дополнительные курсы».
+  Формат вопроса: [сложность, 'вопрос', 'ПРАВИЛЬНЫЙ ответ', 'неверный', 'неверный', 'неверный']
+*/
+FB.addSubject({
+  id: 'englishC2',
+  title: 'English',
+  grade: 'C2 Proficiency',
+  group: 'extra',
+  icon: '🎓',
+  img: 'img/ui/english-c2.webp',
+  color: '#9B5CFF',
+  topics: [
+    {
+      id: 'c2-inversion', icon: '🔄', img: 'img/topics/c2-inversion.webp',
+      title: 'Inversion & emphasis',
+      section: 'Advanced grammar',
+      tags: 'inversion & emphasis advanced grammar',
+      q: [
+        [2, '___ had I sat down than the phone rang.', 'No sooner', 'Hardly', 'Scarcely', 'Barely'],
+        [2, '___ had she left the house when it began to pour.', 'Hardly', 'No sooner', 'Rarely', 'Only'],
+        [3, 'Not until the results were published ___ the scale of the fraud.', 'did anyone realise', 'anyone realised', 'had realised anyone', 'anyone did realise'],
+        [3, '___ it not been for your timely intervention, the deal would have collapsed.', 'Had', 'Were', 'Should', 'Did'],
+        [2, '___ you require further assistance, do not hesitate to contact us.', 'Should', 'Would', 'Had', 'Did'],
+        [2, 'Little ___ that the man beside him was a world-famous violinist.', 'did he know', 'he knew', 'knew he', 'he did know'],
+        [2, 'Only after the third attempt ___ to open the safe.', 'did they manage', 'they managed', 'managed they', 'they did manage'],
+        [3, 'So fierce ___ that the match had to be abandoned.', 'was the storm', 'the storm was', 'did the storm', 'the storm had'],
+        [2, 'Under no circumstances ___ to leave the building.', 'are visitors permitted', 'visitors are permitted', 'visitors permitted are', 'permitted visitors are'],
+        [3, 'Such ___ his fury that nobody dared to speak.', 'was', 'did', 'had', 'being'],
+        [2, 'Not only ___ the exam, but she also came top of her year.', 'did she pass', 'she passed', 'passed she', 'she did pass'],
+        [3, 'Nowhere ___ such breathtaking scenery as in the Highlands.', 'will you find', 'you will find', 'you find', 'find you'],
+        [3, 'Rarely ___ such a lacklustre performance from the reigning champion.', 'have we witnessed', 'we have witnessed', 'witnessed we have', 'we witnessed']
+      ]
+    },
+    {
+      id: 'c2-subjunctive', icon: '🌫️', img: 'img/topics/c2-subjunctive.webp',
+      title: 'Subjunctive & unreal past',
+      section: 'Advanced grammar',
+      tags: 'subjunctive & unreal past advanced grammar',
+      q: [
+        [3, 'It is imperative that every applicant ___ a valid passport.', 'hold', 'will hold', 'is holding', 'had held'],
+        [2, 'It\'s high time we ___ a decision.', 'made', 'make', 'will make', 'have made'],
+        [2, 'I\'d rather you ___ mention this to anyone.', 'didn\'t', 'don\'t', 'won\'t', 'not'],
+        [2, 'If only I ___ his advice last year!', 'had taken', 'took', 'have taken', 'would take'],
+        [3, 'He behaves as if he ___ royalty, though he is plainly nothing of the sort.', 'were', 'be', 'being', 'will be'],
+        [3, '___ that as it may, we must press on.', 'Be', 'Being', 'Is', 'Were'],
+        [3, 'Suffice it ___ that the plan was a disaster.', 'to say', 'saying', 'say', 'said'],
+        [3, 'Come what ___, I will stand by you.', 'may', 'will', 'might', 'can'],
+        [3, 'Far ___ it from me to criticise, but your essay is rather long.', 'be', 'is', 'being', 'was'],
+        [2, 'I wish you ___ making that noise — it\'s driving me mad!', 'would stop', 'will stop', 'had stopped', 'are stopping'],
+        [3, '___ he to refuse, what on earth would we do?', 'Were', 'Should', 'Had', 'Did'],
+        [3, 'The doctor recommended that she ___ alcohol for a month.', 'avoid', 'avoids to', 'avoiding', 'will avoid']
+      ]
+    },
+    {
+      id: 'c2-conditionals', icon: '🔀', img: 'img/topics/c2-conditionals.webp',
+      title: 'Mixed & advanced conditionals',
+      section: 'Advanced grammar',
+      tags: 'mixed & advanced conditionals advanced grammar',
+      q: [
+        [2, 'If I had studied medicine, I ___ a doctor now.', 'would be', 'would have been', 'will be', 'had been'],
+        [3, 'If she weren\'t so stubborn, she ___ the job last week.', 'would have accepted', 'would accept', 'had accepted', 'will accept'],
+        [3, '___ you to see him now, you wouldn\'t recognise him.', 'Were', 'Should', 'Had', 'If'],
+        [2, 'But for the rain, we ___ the match yesterday.', 'would have won', 'won', 'had won', 'will win'],
+        [2, 'I\'ll lend you the car ___ you bring it back by noon.', 'provided', 'unless', 'in case', 'lest'],
+        [3, 'He spoke slowly ___ he be misunderstood.', 'lest', 'unless', 'provided', 'otherwise'],
+        [2, 'I wrote the number down; ___ I would have forgotten it.', 'otherwise', 'unless', 'providing', 'lest'],
+        [3, 'Supposing your flight ___ cancelled, what would you do?', 'were', 'will be', 'would be', 'has been'],
+        [2, 'If it ___ for the lifeguard, the boy would have drowned.', 'hadn\'t been', 'wasn\'t', 'weren\'t', 'hasn\'t been'],
+        [2, 'Had I known you were coming, I ___ a cake.', 'would have baked', 'would bake', 'baked', 'had baked'],
+        [3, 'If you ___ insist on eating so fast, you will get indigestion.', 'will', 'would', 'had', 'should'],
+        [3, '___ I to win the lottery, I would give half of it away.', 'Were', 'Had', 'Should', 'Did']
+      ]
+    },
+    {
+      id: 'c2-cleft', icon: '✂️', img: 'img/topics/c2-cleft.webp',
+      title: 'Participle clauses, cleft sentences & ellipsis',
+      section: 'Advanced grammar',
+      tags: 'participle clauses cleft sentences & ellipsis advanced grammar',
+      q: [
+        [2, '___ by the news, she sat down in stunned silence.', 'Shaken', 'Shaking', 'Having shaken', 'To shake'],
+        [2, '___ the report, he realised it was riddled with errors.', 'Having read', 'Read', 'Being read', 'Having been read'],
+        [3, '___ in 1889, the tower was initially derided by artists.', 'Completed', 'Completing', 'Having completed', 'To complete'],
+        [2, 'What I need ___ a long holiday.', 'is', 'are', 'be', 'being'],
+        [3, 'It was not until midnight ___ he finally turned up.', 'that', 'when', 'which', 'what'],
+        [2, 'All I did ___ ask a simple question.', 'was', 'is', 'did', 'does'],
+        [3, 'The weather ___, the picnic was postponed.', 'being so bad', 'was so bad', 'so bad being', 'to be so bad'],
+        [2, 'She said she would finish it by Friday, and she ___.', 'did', 'has', 'would', 'was'],
+        [3, 'He\'s been told to apologise, but he flatly refuses ___.', 'to', 'it', 'so', 'that'],
+        [2, '\'Will it rain tomorrow?\' — \'I hope ___.\'', 'not', 'no', 'don\'t', 'none'],
+        [3, '___ he was, he refused to give up.', 'Exhausted as', 'As exhausted', 'So exhausted', 'Exhausted though as'],
+        [3, 'Not knowing what to say, ___.', 'she remained silent', 'silence was kept', 'the silence fell', 'it was silent']
+      ]
+    },
+    {
+      id: 'c2-modals', icon: '⚖️', img: 'img/topics/c2-modals.webp',
+      title: 'Modal verbs: fine distinctions',
+      section: 'Advanced grammar',
+      tags: 'modal verbs fine distinctions advanced grammar',
+      q: [
+        [3, 'You ___ have brought flowers — but thank you, they\'re lovely!', 'needn\'t', 'didn\'t need to', 'mustn\'t', 'couldn\'t'],
+        [2, 'He ___ have taken the train: his car is still in the garage.', 'must', 'can\'t', 'needn\'t', 'shan\'t'],
+        [3, 'She ___ have stolen the money: she was in Paris at the time.', 'can\'t', 'needn\'t', 'shan\'t', 'daren\'t'],
+        [2, 'You ___ as well tell him the truth; he\'ll find out anyway.', 'might', 'should', 'could', 'would'],
+        [3, 'I ___ sooner walk than take that rickety old bus.', 'would', 'could', 'should', 'will'],
+        [2, 'You ___ better apologise before she gets really angry.', 'had', 'would', 'should', 'could'],
+        [3, 'He ___ well be right, but I still have my doubts.', 'may', 'must', 'shall', 'need'],
+        [3, 'We ___ to have left earlier; now we\'re stuck in traffic.', 'ought', 'should', 'must', 'had'],
+        [3, 'Try as I ___, I couldn\'t get the jar open.', 'might', 'will', 'shall', 'must'],
+        [2, 'When we were children, we ___ spend hours by the river.', 'would', 'used', 'had', 'should'],
+        [2, '___ I ask what brings you here at this late hour?', 'May', 'Must', 'Will', 'Ought'],
+        [3, 'There\'s no point waiting; the shops ___ be closed by now.', 'will', 'shall', 'ought', 'dare']
+      ]
+    },
+    {
+      id: 'c2-rarewords', icon: '🦉', img: 'img/topics/c2-rarewords.webp',
+      title: 'Rare & erudite words',
+      section: 'Vocabulary',
+      tags: 'rare & erudite words vocabulary',
+      q: [
+        [3, 'What does \'pusillanimous\' mean?', 'cowardly', 'generous', 'talkative', 'stubborn'],
+        [3, 'What does \'obsequious\' mean?', 'too eager to please', 'openly hostile', 'strangely silent', 'extremely lazy'],
+        [3, 'What does \'sesquipedalian\' mean?', 'using very long words', 'lasting 150 years', 'walking with a limp', 'having many legs'],
+        [3, 'What does \'perspicacious\' mean?', 'having keen insight', 'sweating heavily', 'painfully shy', 'easily angered'],
+        [3, 'What does \'recalcitrant\' mean?', 'stubbornly defiant', 'easily persuaded', 'extremely wealthy', 'deeply religious'],
+        [3, 'What does \'lugubrious\' mean?', 'mournful', 'slippery', 'greedy', 'cheerful'],
+        [3, 'In \'an inveterate liar\', what does \'inveterate\' mean?', 'habitual', 'occasional', 'reformed', 'clumsy'],
+        [2, 'What does \'to obfuscate\' mean?', 'to make unclear', 'to make obvious', 'to apologise', 'to accelerate'],
+        [2, 'What does \'laconic\' mean?', 'using few words', 'very talkative', 'easily frightened', 'deeply sentimental'],
+        [3, 'What is a \'sycophant\'?', 'a servile flatterer', 'a stern critic', 'a wandering minstrel', 'a kind of fern'],
+        [3, 'What does \'ineffable\' mean?', 'beyond words', 'impossible to erase', 'completely useless', 'not fit to eat'],
+        [3, 'What does \'pellucid\' mean?', 'very clear', 'dull and cloudy', 'small and round', 'slow and lazy'],
+        [3, 'What is \'defenestration\'?', 'throwing someone out of a window', 'removing a fence from a field', 'stripping an officer of rank', 'cutting down an ancient forest']
+      ]
+    },
+    {
+      id: 'c2-confusables', icon: '👯', img: 'img/topics/c2-confusables.webp',
+      title: 'Commonly confused words',
+      section: 'Vocabulary',
+      tags: 'commonly confused words vocabulary',
+      q: [
+        [3, 'He openly ___ the rules, daring anyone to stop him.', 'flouted', 'flaunted', 'floundered', 'flounced'],
+        [2, 'She loves to ___ her wealth with designer clothes.', 'flaunt', 'flout', 'flounder', 'fluster'],
+        [2, 'The new policy will ___ thousands of workers.', 'affect', 'effect', 'defect', 'infect'],
+        [3, 'Please don\'t ___ — just answer the question directly.', 'prevaricate', 'procrastinate', 'precipitate', 'propitiate'],
+        [3, 'A judge must remain ___ throughout the trial.', 'disinterested', 'uninterested', 'disinteresting', 'uninteresting'],
+        [3, 'The museum\'s collection ___ over 3,000 paintings.', 'comprises', 'comprises of', 'is comprised', 'composes'],
+        [2, 'The signing of the treaty was a ___ moment for both nations.', 'historic', 'historical', 'histrionic', 'historicist'],
+        [3, 'The machine produces a ___ stream of air, without a moment\'s break.', 'continuous', 'continual', 'contiguous', 'contingent'],
+        [2, 'The question failed to ___ a single response.', 'elicit', 'illicit', 'elucidate', 'eliminate'],
+        [2, 'The ___ reason for the delay was a lack of funding.', 'principal', 'principle', 'principled', 'principality'],
+        [3, 'From his tone, I ___ that he was disappointed.', 'inferred', 'implied', 'imputed', 'insinuated'],
+        [2, 'The drug had an ___ effect: patients actually got worse.', 'adverse', 'averse', 'avert', 'adverb'],
+        [2, 'She is ___ to taking risks with other people\'s money.', 'averse', 'adverse', 'inverse', 'diverse']
+      ]
+    },
+    {
+      id: 'c2-wordformation', icon: '🧱', img: 'img/topics/c2-wordformation.webp',
+      title: 'Word formation',
+      section: 'Vocabulary',
+      tags: 'word formation vocabulary',
+      q: [
+        [2, 'The evidence against him was ___ . (REFUTE)', 'irrefutable', 'unrefutable', 'disrefutable', 'misrefutable'],
+        [3, 'She spoke with ___ frankness. (CHARACTER)', 'uncharacteristic', 'discharacteristic', 'incharacteristic', 'mischaracteristic'],
+        [3, 'He was accused of ___ public funds. (APPROPRIATE)', 'misappropriating', 'disappropriating', 'inappropriating', 'malappropriating'],
+        [3, 'The film\'s ending was utterly ___ . (CLIMAX)', 'anticlimactic', 'disclimactic', 'declimaxed', 'unclimaxing'],
+        [2, 'There is growing ___ with mainstream politics. (ILLUSION)', 'disillusionment', 'illusionment', 'disillusionity', 'unillusionness'],
+        [2, 'The witness\'s account was full of ___ . (CONSISTENT)', 'inconsistencies', 'unconsistencies', 'disconsistencies', 'misconsistencies'],
+        [3, 'These rules are ___ in your case. (APPLY)', 'inapplicable', 'unapplyable', 'disapplicable', 'misapplicable'],
+        [3, 'The two accounts are utterly ___ . (RECONCILE)', 'irreconcilable', 'disreconcilable', 'misreconcilable', 'unreconcilating'],
+        [2, 'His ___ methods raised eyebrows among colleagues. (ORTHODOX)', 'unorthodox', 'inorthodox', 'disorthodox', 'misorthodox'],
+        [2, 'The rescue was carried out with ___ speed. (PRECEDENT)', 'unprecedented', 'imprecedented', 'disprecedented', 'nonprecedential'],
+        [3, 'The minister\'s ___ in the affair has never been proven. (COMPLICIT)', 'complicity', 'complicitness', 'complication', 'complicitude'],
+        [3, 'She has an ___ capacity for hard work. (EXHAUST)', 'inexhaustible', 'disexhaustible', 'misexhaustible', 'exhaustionless']
+      ]
+    },
+    {
+      id: 'c2-collocations', icon: '🤝', img: 'img/topics/c2-collocations.webp',
+      title: 'Collocations',
+      section: 'Vocabulary',
+      tags: 'collocations vocabulary',
+      q: [
+        [2, 'The storm ___ havoc across the region.', 'wreaked', 'made', 'did', 'took'],
+        [2, 'The result was a ___ conclusion — everyone knew she would win.', 'foregone', 'forthcoming', 'foreboding', 'forsaken'],
+        [2, 'He always ___ a hard bargain.', 'drives', 'does', 'takes', 'gives'],
+        [3, 'The proposal met with ___ opposition from the unions.', 'stiff', 'rigid', 'steep', 'stocky'],
+        [2, 'It was a ___ escape: the lorry missed us by inches.', 'narrow', 'thin', 'tight', 'slender'],
+        [3, 'Her speech ___ a chord with the audience.', 'struck', 'played', 'rang', 'beat'],
+        [3, 'The company is in ___ financial straits.', 'dire', 'heavy', 'deep', 'sharp'],
+        [3, 'He paid ___ service to reform but did nothing about it.', 'lip', 'mouth', 'tongue', 'word'],
+        [3, 'After weeks of talks, the negotiations reached an ___ .', 'impasse', 'obstacle', 'embargo', 'intermission'],
+        [2, 'Their argument simply doesn\'t ___ water.', 'hold', 'keep', 'carry', 'bear'],
+        [3, 'The minister ___ the brunt of the criticism.', 'bore', 'held', 'made', 'had'],
+        [3, 'We need to ___ a balance between freedom and security.', 'strike', 'hit', 'beat', 'make']
+      ]
+    },
+    {
+      id: 'c2-prepositions', icon: '📌', img: 'img/topics/c2-prepositions.webp',
+      title: 'Dependent prepositions',
+      section: 'Vocabulary',
+      tags: 'dependent prepositions vocabulary',
+      q: [
+        [3, 'Such behaviour is tantamount ___ treason.', 'to', 'with', 'of', 'as'],
+        [3, 'She seems totally impervious ___ criticism.', 'to', 'from', 'against', 'of'],
+        [2, 'A quiet room is conducive ___ concentration.', 'to', 'with', 'at', 'from'],
+        [2, 'He was acquitted ___ all charges.', 'of', 'from', 'for', 'about'],
+        [3, 'The offer is contingent ___ the results of the survey.', 'on', 'to', 'with', 'of'],
+        [2, 'She has a deep aversion ___ publicity.', 'to', 'from', 'against', 'with'],
+        [2, 'The expedition was fraught ___ danger.', 'with', 'of', 'in', 'by'],
+        [2, 'His version of events is at odds ___ the evidence.', 'with', 'to', 'against', 'from'],
+        [3, 'She seemed blissfully oblivious ___ the danger.', 'to', 'from', 'at', 'with'],
+        [3, 'This painting is redolent ___ the Renaissance masters.', 'of', 'to', 'from', 'at'],
+        [3, 'The whole plan is predicated ___ the assumption that prices will fall.', 'on', 'to', 'at', 'for'],
+        [3, 'He took exception ___ her remarks.', 'to', 'at', 'with', 'against'],
+        [3, 'Three officials were accused of complicity ___ the fraud.', 'in', 'to', 'at', 'for']
+      ]
+    },
+    {
+      id: 'c2-idioms', icon: '🎭', img: 'img/topics/c2-idioms.webp',
+      title: 'Idioms & allusions',
+      section: 'Idioms & expressions',
+      tags: 'idioms & allusions idioms & expressions',
+      q: [
+        [2, 'He announced the news before I could and completely stole my ___ .', 'thunder', 'lightning', 'storm', 'rain'],
+        [2, 'Don\'t count your ___ before they hatch.', 'chickens', 'eggs', 'ducks', 'birds'],
+        [2, 'What does \'to bite the bullet\' mean?', 'to face something unpleasant bravely', 'to speak without thinking first', 'to give up much too early', 'to attack someone without warning'],
+        [3, 'What is \'a Pyrrhic victory\'?', 'a victory won at too great a cost', 'a victory by the narrowest margin', 'a victory that nobody expected', 'a victory celebrated with fire'],
+        [3, 'What does \'to be hoist with one\'s own petard\' mean?', 'to be harmed by one\'s own scheme', 'to be promoted unexpectedly', 'to be carried aloft by a crowd', 'to be sent into exile'],
+        [3, 'What is \'Hobson\'s choice\'?', 'no real choice at all', 'an agonising moral dilemma', 'a choice between two good options', 'a choice made by tossing a coin'],
+        [3, 'What does \'to cut the Gordian knot\' mean?', 'to solve a problem decisively', 'to break off an engagement', 'to start a family quarrel', 'to tie up loose ends neatly'],
+        [3, 'What does \'to damn with faint praise\' mean?', 'to criticise by praising half-heartedly', 'to praise someone far too lavishly', 'to swear quietly under one\'s breath', 'to condemn someone in public'],
+        [3, 'When the scandal broke, the junior minister was left holding the ___ .', 'baby', 'child', 'basket', 'cards'],
+        [3, 'What does \'to send someone to Coventry\' mean?', 'to refuse to speak to them', 'to promote them to head office', 'to send them on a long journey', 'to dismiss them from their job'],
+        [2, 'What is \'the elephant in the room\'?', 'an obvious problem nobody mentions', 'a very large and clumsy guest', 'an expensive but unwanted gift', 'a secret that everyone has forgotten'],
+        [3, 'What are \'halcyon days\'?', 'idyllic, peaceful times in the past', 'days of exhausting manual labour', 'stormy days spent at sea', 'days set aside for fasting']
+      ]
+    },
+    {
+      id: 'c2-phrasal', icon: '🧗', img: 'img/topics/c2-phrasal.webp',
+      title: 'Advanced phrasal verbs',
+      section: 'Idioms & expressions',
+      tags: 'advanced phrasal verbs idioms & expressions',
+      q: [
+        [3, 'He tried to fob me ___ with a feeble excuse.', 'off', 'out', 'away', 'down'],
+        [2, 'Few believed he could pull it ___, but he did.', 'off', 'up', 'over', 'down'],
+        [2, 'The negotiations ___ down over the issue of pay.', 'broke', 'fell', 'went', 'came'],
+        [2, 'Don\'t let him egg you ___ — you\'ll only get into trouble.', 'on', 'up', 'in', 'over'],
+        [3, 'The government is going to ___ down on tax evasion.', 'crack', 'knuckle', 'buckle', 'hunker'],
+        [3, 'She finally ___ up the courage to ask for a pay rise.', 'plucked', 'brought', 'drew', 'took'],
+        [3, 'His lies finally caught ___ with him.', 'up', 'on', 'out', 'over'],
+        [2, 'The good hotels were full, so we had to ___ for a cheaper one.', 'settle', 'sort', 'set', 'stand'],
+        [3, 'He ___ out at the critics in a furious tirade.', 'lashed', 'lurched', 'lounged', 'leaned'],
+        [2, 'The scandal soon ___ over and was forgotten.', 'blew', 'went', 'ran', 'fell'],
+        [3, 'She ___ away a fortune on gambling and fast cars.', 'frittered', 'flittered', 'fluttered', 'filtered'],
+        [3, 'The opposition ___ on the minister\'s slip of the tongue.', 'pounced', 'bounced', 'trounced', 'flounced'],
+        [3, 'He\'s forever ___ up to the boss in the hope of promotion.', 'sucking', 'stacking', 'sinking', 'sagging']
+      ]
+    },
+    {
+      id: 'c2-latin', icon: '🏺', img: 'img/topics/c2-latin.webp',
+      title: 'Latin & French expressions',
+      section: 'Idioms & expressions',
+      tags: 'latin & french expressions idioms & expressions',
+      q: [
+        [3, 'What does \'sine qua non\' mean?', 'an essential condition', 'without any delay', 'for this purpose only', 'in good faith'],
+        [2, 'What does \'bona fide\' mean?', 'genuine', 'fake', 'temporary', 'foreign'],
+        [3, 'What does \'de rigueur\' mean?', 'required by etiquette or fashion', 'done in a very rigorous way', 'strictly forbidden by law', 'hopelessly old-fashioned'],
+        [2, 'What is a \'faux pas\'?', 'a social blunder', 'a false friend', 'a dance step', 'a forged passport'],
+        [2, 'What does \'ad hoc\' mean?', 'for this particular purpose', 'for ever and ever', 'in exactly the same way', 'at the very beginning'],
+        [3, 'What does \'carte blanche\' mean?', 'complete freedom to act', 'a white wedding dress', 'a set restaurant menu', 'an official written warning'],
+        [3, 'What is a \'quid pro quo\'?', 'a favour given in return for another', 'a quick and easy profit', 'a fine imposed by a court', 'a list of important people'],
+        [3, 'What is \'Schadenfreude\'?', 'pleasure at another\'s misfortune', 'fear of the unknown', 'longing for one\'s homeland', 'anger at injustice'],
+        [3, 'What is the \'zeitgeist\'?', 'the spirit of the age', 'a German ghost story', 'a perfect sense of timing', 'a change of time zone'],
+        [3, 'What does \'raison d\'être\' mean?', 'a reason for existing', 'a reasonable excuse', 'a sensible decision', 'a right to protest'],
+        [3, 'What does \'per se\' mean?', 'in itself', 'per person', 'for example', 'at any rate'],
+        [3, 'What is a \'fait accompli\'?', 'something already done and irreversible', 'a complete and utter failure', 'an accomplished and famous artist', 'a celebration after a victory'],
+        [3, 'What is a \'non sequitur\'?', 'a statement that doesn\'t follow logically', 'a leader who has lost all his followers', 'a sentence that is left unfinished', 'a film that has no sequel']
+      ]
+    },
+    {
+      id: 'c2-transform', icon: '🔑', img: 'img/topics/c2-transform.webp',
+      title: 'Key word transformations',
+      section: 'Use of English',
+      tags: 'key word transformations use of english',
+      q: [
+        [3, '\'I didn\'t realise how serious it was.\' (DAWN) → It ___ how serious it was.', 'never dawned on me', 'didn\'t dawn to me', 'never dawned me', 'wasn\'t dawned on me'],
+        [3, '\'She was very lucky not to die.\' (NARROWLY) → She ___ death.', 'narrowly escaped', 'narrowly avoided from', 'was narrowly escaped', 'escaped narrowly to'],
+        [3, '\'I\'m sure he didn\'t mean to offend you.\' (CANNOT) → He ___ to offend you.', 'cannot have meant', 'cannot meant', 'cannot have mean', 'cannot be meant'],
+        [2, '\'People say he is a millionaire.\' (SAID) → He ___ a millionaire.', 'is said to be', 'is said being', 'says to be', 'is said that he is'],
+        [2, '\'They are certain to win.\' (BOUND) → They ___ win.', 'are bound to', 'are bound for', 'bound to', 'have bound to'],
+        [2, '\'He didn\'t succeed in convincing them.\' (FAILED) → He ___ them.', 'failed to convince', 'failed convincing', 'failed in convince', 'was failed to convince'],
+        [3, '\'It doesn\'t matter to me what you do.\' (DIFFERENCE) → It ___ to me what you do.', 'makes no difference', 'does no difference', 'makes not difference', 'has no difference'],
+        [2, '\'The film was so boring that we left.\' (SUCH) → It ___ that we left.', 'was such a boring film', 'was such boring film', 'was so a boring film', 'was a such boring film'],
+        [3, '\'Her success was largely due to her persistence.\' (OWED) → She ___ her persistence.', 'largely owed her success to', 'owed largely her success to', 'largely owed to her success', 'owed her success largely for'],
+        [2, '\'I regret not telling him the truth.\' (WISH) → I ___ him the truth.', 'wish I had told', 'wish I told', 'wish I would tell', 'wish to have told'],
+        [3, '\'Nobody expected the company to collapse.\' (CAME) → The company\'s collapse ___ everyone.', 'came as a surprise to', 'came to a surprise of', 'came surprisingly to', 'came by surprise to'],
+        [2, '\'He is very proud of his garden.\' (PRIDE) → He ___ his garden.', 'takes great pride in', 'takes great pride of', 'makes great pride in', 'has great pride on']
+      ]
+    },
+    {
+      id: 'c2-traps', icon: '🪤', img: 'img/topics/c2-traps.webp',
+      title: 'Grammar traps & hypercorrection',
+      section: 'Use of English',
+      tags: 'grammar traps & hypercorrection use of english',
+      q: [
+        [3, 'Which sentence is correct?', 'Neither of the proposals is acceptable.', 'Neither proposals is acceptable.', 'Neither of the proposal are acceptable.', 'Neither of proposals is acceptable.'],
+        [2, 'Between you and ___, I think he\'s lying.', 'me', 'I', 'myself', 'mine'],
+        [3, 'To ___ should I address the letter?', 'whom', 'who', 'whose', 'who\'s'],
+        [3, 'Give the prize to ___ needs it most.', 'whoever', 'whomever', 'whom', 'who\'s'],
+        [3, 'The documents have ___ untouched in the archive for years.', 'lain', 'laid', 'lied', 'layed'],
+        [2, 'The number of applicants ___ risen sharply this year.', 'has', 'have', 'are', 'were'],
+        [2, 'A number of problems ___ arisen since the merger.', 'have', 'has', 'is', 'was'],
+        [2, 'He denied ___ the documents before the meeting.', 'having seen', 'to have seen', 'to see', 'have seen'],
+        [2, 'She strongly objected to ___ like a child.', 'being treated', 'be treated', 'treat', 'being treat'],
+        [2, 'The more I learn, ___ I realise how little I know.', 'the more', 'more', 'the most', 'so more'],
+        [3, 'The reason I\'m late is ___ my train was cancelled.', 'that', 'why', 'for', 'due'],
+        [2, 'It\'s no use ___ over spilt milk.', 'crying', 'to cry', 'cry', 'cried']
+      ]
+    },
+    {
+      id: 'c2-shades', icon: '🎚️', img: 'img/topics/c2-shades.webp',
+      title: 'Shades of meaning',
+      section: 'Use of English',
+      tags: 'shades of meaning use of english',
+      q: [
+        [2, 'Which word has a positive connotation?', 'thrifty', 'stingy', 'miserly', 'tight-fisted'],
+        [2, 'Which is the most formal way to say \'start\'?', 'commence', 'kick off', 'get going', 'start up'],
+        [3, 'Despite the setbacks, she remained ___ about the outcome.', 'sanguine', 'sanguinary', 'sanctimonious', 'sardonic'],
+        [3, 'Which word describes someone who acts morally superior?', 'sanctimonious', 'sagacious', 'sanguine', 'salubrious'],
+        [3, 'Which word means \'health-giving\' (of a climate)?', 'salubrious', 'salacious', 'sallow', 'saline'],
+        [3, 'The defeat taught them a ___ lesson — painful, but useful.', 'salutary', 'salubrious', 'salacious', 'solitary'],
+        [3, 'Which word does NOT mean \'reluctant to speak\'?', 'garrulous', 'taciturn', 'reticent', 'laconic'],
+        [3, 'Which word means \'deliberately ambiguous\'?', 'equivocal', 'univocal', 'equitable', 'equable'],
+        [3, 'Which word describes an argument that seems plausible but is false?', 'specious', 'spacious', 'special', 'speculative'],
+        [3, 'Which word means \'to criticise severely\'?', 'excoriate', 'exonerate', 'exculpate', 'exhilarate'],
+        [3, 'Which word means \'harmful in a gradual, subtle way\'?', 'insidious', 'invidious', 'insipid', 'incisive'],
+        [3, 'Which word means \'existing in name only\'?', 'nominal', 'nomadic', 'normative', 'numinous'],
+        [3, 'Which verb means \'to make less severe\'?', 'mitigate', 'militate', 'litigate', 'instigate']
+      ]
+    }
+  ]
+});
