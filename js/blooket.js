@@ -26,22 +26,21 @@
   B.FEED_MAX = 24;
   B.LURE_MAX = 4;
 
-  B.PASSWORDS = ['банан', 'ракета', 'дракон', 'пицца', 'кактус', 'радуга', 'тигр', 'ниндзя', 'комета', 'арбуз',
-    'пингвин', 'вулкан', 'робот', 'лимон', 'молния', 'кекс', 'панда', 'океан', 'шоколад', 'динозавр', 'алмаз', 'ёжик',
-    'сокол', 'вафля', 'планета', 'ковбой', 'чипсы', 'мармелад', 'жираф', 'гитара', 'фламинго', 'торнадо', 'пончик',
-    'единорог', 'кит', 'попкорн'];
-  // для английских предметов — английские пароли
-  B.PASSWORDS_EN = ['banana', 'rocket', 'dragon', 'pizza', 'cactus', 'rainbow', 'tiger', 'ninja', 'comet', 'pancake',
-    'penguin', 'volcano', 'robot', 'lemon', 'thunder', 'cupcake', 'panda', 'ocean', 'chocolate', 'dinosaur', 'diamond',
-    'hedgehog', 'falcon', 'waffle', 'planet', 'cowboy', 'popcorn', 'giraffe', 'guitar', 'flamingo', 'tornado', 'donut',
-    'unicorn', 'whale', 'marshmallow', 'pirate'];
+  /* Пароли как в Blooket (Crypto Hack): цифры, «клавиатурные», популярные слабые пароли, смешные длинные слова.
+     Плюс к ним каждый раз добавляются случайные наборы букв и цифр. Во всех предметах одинаково. */
+  B.PASSWORDS = ['12345678', '123456789', '11111111', '00000000', '87654321', '13579135', '24682468', '1q2w3e4r',
+    'qwerty', 'qwerty123', 'asdfghjkl', 'zxcvbnm', 'password', 'password123', 'p4ssw0rd', 'letmein', 'admin',
+    'admin2025', 'welcome1', 'abc123', 'abcdefgh', 'aaaaaaaa', 'hello123', 'secret', 'supersecret', 'trustno1',
+    'iloveyou', 'sunshine', 'monkey123', 'football', 'h4ck3r', 'ninja007', 'nopassword', 'pizzalover',
+    'chickennugget', 'bananaboat', 'purplemonkey', 'hackerman', 'cryptoking', 'superhacker', 'ilovecats',
+    'doggo2025', 'xX_gamer_Xx', 'unicorn777', 'potato42', 'cookiemonster'];
+  B.randomPassword = function () {
+    var abc = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789', len = 7 + rnd(3), out = '';
+    for (var i = 0; i < len; i++) out += abc[rnd(abc.length)];
+    return out;
+  };
   B.PASS_CHOICES = 5;   // из скольких паролей игрок выбирает свой
   B.GUESS_CHOICES = 3;  // из скольких угадывает пароль соперника
-  /* Английский предмет — если все выбранные темы из английских курсов */
-  B.langOf = function (topicKeys) {
-    var keys = topicKeys || [];
-    return keys.length && keys.every(function (k) { return /^english/i.test(String(k).split('/')[0]); }) ? 'en' : 'ru';
-  };
 
   function rnd(n) { return Math.floor(E.random() * n); }
   function rint(a, b) { return a + rnd(b - a + 1); }
@@ -132,7 +131,7 @@
       kind: 'blooket', mode: 'blooket', game: game, id: Math.random().toString(36).slice(2, 10), v: 1, created: now,
       code: cfg.code || null,
       cfg: {
-        topicKeys: (cfg.topicKeys || []).slice(), minutes: minutes, game: game, lang: B.langOf(cfg.topicKeys),
+        topicKeys: (cfg.topicKeys || []).slice(), minutes: minutes, game: game,
         title: cfg.title || 'Викторина', subtitle: cfg.subtitle || '', theme: cfg.theme || 'violet', winVideo: cfg.winVideo || ''
       },
       pool: makePool(cfg.topicKeys), phase: 'lobby', start: null, ends: null, frenzy: 0,
@@ -163,9 +162,10 @@
     p.pv++;
   }
   function setSt(p, st) { p.st = st; p.step++; p.pv++; }
+  // n разных паролей: один — случайный набор букв и цифр, остальные — из готового списка
   function passwords(s, n, except) {
-    var list = s.cfg.lang === 'en' ? B.PASSWORDS_EN : B.PASSWORDS;
-    return E.shuffle(list.filter(function (w) { return w !== except; })).slice(0, n);
+    var list = E.shuffle(B.PASSWORDS.filter(function (w) { return w !== except; })).slice(0, Math.max(0, n - 1));
+    return E.shuffle(list.concat([B.randomPassword()])).slice(0, n);
   }
 
   function nextQ(s, p) {
