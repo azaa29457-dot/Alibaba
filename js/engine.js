@@ -60,7 +60,6 @@
     return a;
   }
   E.shuffle = shuffle;
-  function clamp0(x) { return x < 0 ? 0 : x; }
   function q(name) { return '«' + name + '»'; }
 
   E.cleanName = function (s, max) {
@@ -82,9 +81,53 @@
   };
   E.availableCount = function (topicKeys) { return E.collect(topicKeys).length; };
 
-  /* Берёт count вопросов: примерно 35% лёгких, 35% средних, 30% сложных, поровну из выбранных тем. */
+  /* ---------- История вопросов: чтобы вопросы не повторялись от игры к игре ----------
+     Каждый показанный вопрос получает номер игры. Новая игра сначала берёт вопросы, которых ещё не было,
+     и только когда они закончатся — те, что были давнее всего. E.history подключает интерфейс (localStorage). */
+  E.history = null;
+  E.qid = function (x) {
+    var s = x.key + '|' + x.text + '|' + (x.opts ? x.opts[0] : ''), h = 5381;
+    for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return (h >>> 0).toString(36);
+  };
+  E.makeHistory = function (storage, name) {
+    var data = null;
+    try { data = JSON.parse(storage.getItem(name)); } catch (e) { data = null; }
+    if (!data || typeof data.m !== 'object' || !data.m) data = { g: 0, m: {} };
+    return {
+      get: function (id) { return data.m[id] || 0; },
+      mark: function (list) {
+        data.g++;
+        list.forEach(function (x) { data.m[E.qid(x)] = data.g; });
+        var ids = Object.keys(data.m);
+        if (ids.length > 12000) {
+          ids.sort(function (a, b) { return data.m[a] - data.m[b]; }).slice(0, ids.length - 8000).forEach(function (id) { delete data.m[id]; });
+        }
+        try { storage.setItem(name, JSON.stringify(data)); } catch (e) { }
+      },
+      reset: function () { data = { g: 0, m: {} }; try { storage.removeItem(name); } catch (e) { } }
+    };
+  };
+
+  /* Берёт count вопросов. Если подключена история — сначала те, что ещё не попадались (или попадались давнее всего). */
   E.pickQuestions = function (topicKeys, count) {
-    var all = E.collect(topicKeys);
+    var all = E.collect(topicKeys), H = E.history;
+    if (!H) return balancedPick(all, topicKeys, count);
+    var groups = {};
+    all.forEach(function (x) { var g = H.get(E.qid(x)); (groups[g] = groups[g] || []).push(x); });
+    var chosen = [];
+    Object.keys(groups).map(Number).sort(function (a, b) { return a - b; }).some(function (g) {
+      var list = groups[g];
+      if (chosen.length + list.length <= count) chosen = chosen.concat(list);
+      else chosen = chosen.concat(balancedPick(list, topicKeys, count - chosen.length));
+      return chosen.length >= count;
+    });
+    H.mark(chosen);
+    return shuffle(chosen);
+  };
+
+  /* Берёт count вопросов из all: примерно 35% лёгких, 35% средних, 30% сложных, поровну из выбранных тем. */
+  function balancedPick(all, topicKeys, count) {
     if (count >= all.length) return shuffle(all.slice());
     var byKeyD = {};
     all.forEach(function (x) {
@@ -113,7 +156,7 @@
       while (chosen.length < count && rest.length) chosen.push(rest.pop());
     }
     return shuffle(chosen);
-  };
+  }
 
   function makeTiles(cfg) {
     // count — всего плиток на поле (как в Baamboozle: 16 или 24); бонусы входят в это число
@@ -244,7 +287,7 @@
     ev.push({ type: 'turn', team: s.turn });
   }
 
-  /* Применяет бонус. Очки никогда не уходят ниже нуля. */
+  /* Применяет бонус. Как в Baamboozle, очки могут уходить в минус. */
   E.applyPower = function (s, box, target) {
     var me = s.turn, T = s.teams, t = T[me], o = target == null ? null : T[target];
     var before = T.map(function (x) { return x.score; });
@@ -259,28 +302,28 @@
         t.score = Math.max(t.score + 5, mx + 5);
         text = 'Go to first place!'; break;
       case 'magnet':
-        var take = Math.min(amt, o.score); o.score -= take; t.score += take;
-        text = 'Take ' + take + ' points from ' + q(o.name) + '!'; break;
+        o.score -= amt; t.score += amt;
+        text = 'Take ' + amt + ' points from ' + q(o.name) + '!'; break;
       case 'zap':
-        T.forEach(function (x, i) { if (i !== me) x.score = clamp0(x.score - amt); });
+        T.forEach(function (x, i) { if (i !== me) x.score -= amt; });
         text = 'Other teams lose ' + amt + ' points!'; break;
       case 'swap':
         var tmp = t.score; t.score = o.score; o.score = tmp;
         text = 'Swap points with ' + q(o.name) + '!'; break;
       case 'heart': o.score += amt; text = q(o.name) + ' wins ' + amt + ' points!'; break;
       case 'ghost':
-        var give = Math.min(amt, t.score); t.score -= give; o.score += give;
-        text = 'Give ' + give + ' points to ' + q(o.name) + '!'; break;
+        t.score -= amt; o.score += amt;
+        text = 'Give ' + amt + ' points to ' + q(o.name) + '!'; break;
       case 'trap': text = 'No points!'; break;
       case 'boom':
-        var l3 = Math.min(50, t.score); t.score -= l3;
+        t.score -= 50;
         text = 'Lose 50 points!'; break;
       case 'croc':
-        var l4 = Math.min(amt, t.score); t.score -= l4;
+        t.score -= amt;
         text = 'Lose ' + amt + ' points!'; break;
       case 'banana':
         var mn = Math.min.apply(null, others);
-        t.score = clamp0(Math.min(t.score, mn - 5));
+        t.score = Math.min(t.score, mn - 5);
         text = 'Go to last place!'; break;
       case 'eraser': t.score = 0; text = 'Reset your score!'; break;
       case 'virus': T.forEach(function (x) { x.score = 0; }); text = 'Reset all scores!'; break;
@@ -425,7 +468,7 @@
         case 'adjust': {
           var at = s.teams[a.team];
           if (!at || !a.delta) return false;
-          at.score = clamp0(at.score + (a.delta | 0));
+          at.score += (a.delta | 0);
           ev.push({ type: 'adjust', team: a.team });
           return true;
         }

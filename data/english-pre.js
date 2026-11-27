@@ -36,7 +36,12 @@ FB.addSubject({
         [3, "He's always ___ his keys! It's so annoying.", "losing", "lose", "loses", "lost"],
         [3, "The train ___ at 6:15 tomorrow morning. (timetable)", "leaves", "is leave", "leaving", "leave"],
         [3, "Choose the correct question.", "What does your sister do?", "What does your sister does?", "What your sister does?", "What is your sister do?"],
-        [3, "I ___ what you mean. (= I understand)", "see", "am seeing", "sees", "am see"]
+        [3, "I ___ what you mean. (= I understand)", "see", "am seeing", "sees", "am see"],
+        [1, "They ___ football on Sundays.", "play", "plays", "are play", "playing"],
+        [2, "Shh! The children ___ their homework.", "are doing", "do", "does", "doing"],
+        [2, "How much ___ this T-shirt cost?", "does", "do", "is", "are"],
+        [2, "I ___ to music right now, so I can't hear you.", "am listening", "listen", "listens", "listening am"],
+        [2, "Which phrase is a signal for Present Continuous?", "at the moment", "usually", "every day", "often"]
       ]
     },
     {
@@ -62,7 +67,12 @@ FB.addSubject({
         [3, "The past forms of «teach» and «catch» are…", "taught / caught", "teached / catched", "tought / cought", "taught / catched"],
         [3, "How do you pronounce the ending of «stopped»?", "/t/", "/d/", "/ɪd/", "/s/"],
         [3, "The past form of «lie» (= to say something untrue) is…", "lied", "lay", "laid", "lain"],
-        [3, "I ___ him two days ago.", "saw", "have seen", "seen", "see"]
+        [3, "I ___ him two days ago.", "saw", "have seen", "seen", "see"],
+        [1, "The past form of «go» is…", "went", "goed", "gone", "goes"],
+        [2, "We ___ a great time at the party last Saturday.", "had", "have", "has", "haved"],
+        [2, "What ___ she say to you?", "did", "does", "was", "do"],
+        [2, "The past form of «bring» is…", "brought", "bringed", "brang", "brung"],
+        [2, "I ___ my homework, then I went out.", "finished", "finish", "finishing", "have finish"]
       ]
     },
     {
@@ -88,7 +98,12 @@ FB.addSubject({
         [3, "Which verb is NOT normally used in Past Continuous?", "belong", "walk", "cook", "swim"],
         [3, "I ___ to music, so I ___ the doorbell.", "was listening / didn't hear", "listened / wasn't hearing", "was listening / wasn't hearing", "listened / didn't heard"],
         [3, "Find the mistake: «When I was arriving, the film started.»", "was arriving → arrived", "When → While", "the film → a film", "started → was start"],
-        [3, "In stories, Past Continuous is often used to…", "describe the background (the scene)", "talk about future plans", "give orders", "describe general rules"]
+        [3, "In stories, Past Continuous is often used to…", "describe the background (the scene)", "talk about future plans", "give orders", "describe general rules"],
+        [1, "We ___ dinner when the lights went out.", "were having", "had have", "are having", "have"],
+        [2, "___ you sleeping when I phoned?", "Were", "Did", "Was", "Are"],
+        [2, "Two hours ago she ___ in the garden.", "was working", "is working", "works", "working"],
+        [2, "The children ___ while their parents were cooking.", "were playing", "was playing", "played to", "plays"],
+        [2, "I ___ to school when I saw an accident.", "was walking", "walk", "am walking", "have walked"]
       ]
     },
     {
@@ -114,7 +129,12 @@ FB.addSubject({
         [3, "The past participle of «choose» is…", "chosen", "chose", "choosed", "choosen"],
         [3, "This is the best cake I ___ .", "have ever eaten", "ever ate", "have never eaten", "am ever eating"],
         [3, "Find the mistake: «I have seen her yesterday.»", "have seen → saw", "seen → see", "her → she", "yesterday → tomorrow"],
-        [3, "«He's gone to Spain» means…", "he is in Spain now", "he went to Spain and came back", "he will go to Spain", "he never goes to Spain"]
+        [3, "«He's gone to Spain» means…", "he is in Spain now", "he went to Spain and came back", "he will go to Spain", "he never goes to Spain"],
+        [1, "The past participle of «see» is…", "seen", "saw", "seed", "seeing"],
+        [2, "We ___ lunch yet.", "haven't had", "didn't have", "don't have", "hasn't had"],
+        [2, "She ___ her leg, so she can't play today.", "has broken", "have broken", "broken", "is broken"],
+        [2, "___ he finished the test already?", "Has", "Have", "Did", "Is"],
+        [2, "I have ___ been to Africa. I'd love to go there.", "never", "ever", "yet", "already"]
       ]
     },
     {
@@ -140,7 +160,12 @@ FB.addSubject({
         [3, "«When did you get your car?» — «___»", "Three years ago.", "For three years.", "Since three years.", "During three years."],
         [3, "Which sentence is correct?", "Shakespeare wrote many plays.", "Shakespeare has written many plays.", "Shakespeare has wrote many plays.", "Shakespeare writes many plays yet."],
         [3, "It's the first time I ___ snow!", "have seen", "saw", "see", "am seeing"],
-        [3, "I ___ this book three times, and I'm going to read it again.", "have read", "had read", "am read", "reads"]
+        [3, "I ___ this book three times, and I'm going to read it again.", "have read", "had read", "am read", "reads"],
+        [2, "I ___ to Astana last year.", "went", "have gone", "have been", "go"],
+        [2, "She ___ three books this month so far.", "has read", "readed", "has readed", "have read"],
+        [2, "Which word goes with Present Perfect?", "just", "yesterday", "last week", "in 2010"],
+        [2, "We ___ each other since we were children.", "have known", "knew", "know", "are knowing"],
+        [2, "I ___ him since Monday.", "haven't seen", "didn't see", "don't see", "not saw"]
       ]
     },
     {
@@ -166,7 +191,12 @@ FB.addSubject({
         [3, "Which sentence shows a decision made at the moment of speaking?", "«It's cold.» — «I'll close the window.»", "I'm going to study medicine next year.", "We're meeting at six.", "The shop opens at nine."],
         [3, "«Shall I carry your bag?» — this is…", "an offer", "a prediction", "a timetable", "a complaint"],
         [3, "By the year 2050, cars ___ probably fly.", "will", "are going", "are", "do"],
-        [3, "I ___ my driving test next Friday — I've already booked it.", "am taking", "take", "will taking", "took"]
+        [3, "I ___ my driving test next Friday — I've already booked it.", "am taking", "take", "will taking", "took"],
+        [1, "«I've lost my pen.» — «Don't worry, I ___ you mine.»", "'ll lend", "lend", "am lending", "lent"],
+        [2, "Look out! You ___ fall!", "are going to", "will to", "going", "are going"],
+        [2, "We ___ to the cinema tonight — we've already bought tickets.", "are going", "went", "goes", "have gone"],
+        [2, "I promise I ___ late again.", "won't be", "am not", "not be", "don't be"],
+        [2, "Which tense do we use for timetables (trains, films)?", "Present Simple", "Past Simple", "Present Perfect", "Past Continuous"]
       ]
     },
     {
@@ -192,7 +222,12 @@ FB.addSubject({
         [3, "Choose the correct sentence.", "My sister is two years older than me.", "My sister is two years elder than me.", "My sister is two years more old than me.", "My sister is two years oldest than me."],
         [3, "This is ___ book in the series. (worse than all the others)", "the least interesting", "the less interesting", "least interesting than", "the fewest interesting"],
         [3, "Which pair is correct for «thin»?", "thinner / the thinnest", "thiner / the thinest", "more thin / the most thin", "thinner / the most thin"],
-        [3, "It's getting ___ and ___ every day.", "warmer / warmer", "more warm / more warm", "warmest / warmest", "warm / warmer"]
+        [3, "It's getting ___ and ___ every day.", "warmer / warmer", "more warm / more warm", "warmest / warmest", "warm / warmer"],
+        [1, "The comparative of «big» is…", "bigger", "biger", "more big", "biggest"],
+        [2, "Russia is the ___ country in the world.", "largest", "larger", "most large", "large"],
+        [2, "This exercise is ___ than the last one.", "easier", "more easy", "easyer", "easiest"],
+        [2, "My phone is ___ expensive as yours.", "as", "so", "than", "more"],
+        [2, "He is the ___ person I know.", "funniest", "funnier", "most funny", "funnyest"]
       ]
     },
     {
@@ -218,7 +253,12 @@ FB.addSubject({
         [3, "Which noun is uncountable in English?", "furniture", "chair", "table", "sofa"],
         [3, "Which sentence is correct?", "The news is good.", "The news are good.", "The news were good.", "A news is good."],
         [3, "___ of the students passed the test. (= 0 students)", "None", "No", "Any", "Nothing"],
-        [3, "There were too ___ people on the bus.", "many", "much", "little", "a lot"]
+        [3, "There were too ___ people on the bus.", "many", "much", "little", "a lot"],
+        [1, "How ___ water do you drink every day?", "much", "many", "few", "a few"],
+        [2, "There aren't ___ chairs for everyone.", "enough", "enough of", "much", "a little"],
+        [2, "I need ___ information about the trip.", "some", "a", "many", "few"],
+        [2, "There's ___ salt in this soup — it's too salty!", "too much", "too many", "a few", "many"],
+        [2, "Which word can't be used with «a/an»?", "advice", "idea", "apple", "umbrella"]
       ]
     },
     {
@@ -244,7 +284,12 @@ FB.addSubject({
         [3, "She lives in ___ United States.", "the", "a", "an", "—"],
         [3, "Which is correct?", "the Pacific Ocean", "a Pacific Ocean", "Pacific the Ocean", "an Pacific Ocean"],
         [3, "She is ___ best student in our class.", "the", "a", "an", "—"],
-        [3, "Which sentence is correct?", "I love music.", "I love a music.", "I love an music.", "I love musics."]
+        [3, "Which sentence is correct?", "I love music.", "I love a music.", "I love an music.", "I love musics."],
+        [1, "She eats ___ apple every day.", "an", "a", "the", "—"],
+        [2, "___ Moon goes round the Earth.", "The", "A", "An", "—"],
+        [2, "He's ___ honest man.", "an", "a", "the", "—"],
+        [2, "My father is ___ engineer.", "an", "a", "the", "—"],
+        [2, "Which country name needs «the»?", "the Netherlands", "the Kazakhstan", "the France", "the Japan"]
       ]
     },
     {
@@ -270,7 +315,12 @@ FB.addSubject({
         [3, "She's worked all day. She ___ be very tired.", "must", "can't", "mustn't", "should to"],
         [3, "I'm sorry, I ___ come to your party next Saturday.", "won't be able to", "can't to", "don't can", "mustn't to"],
         [3, "Which sentence gives advice?", "If I were you, I'd see a doctor.", "You mustn't see a doctor.", "You can't see a doctor.", "You had to see a doctor."],
-        [3, "«May I come in?» is…", "a polite request for permission", "an obligation", "a prediction about the past", "a strong prohibition"]
+        [3, "«May I come in?» is…", "a polite request for permission", "an obligation", "a prediction about the past", "a strong prohibition"],
+        [1, "You ___ wear a helmet when you ride a bike. It's the rule.", "must", "mustn't", "can't", "needn't"],
+        [2, "It's sunny. You ___ take an umbrella.", "don't need to", "must", "have to", "mustn't"],
+        [2, "___ I borrow your pen, please?", "May", "Must", "Should", "Have"],
+        [2, "He ___ run very fast when he was young.", "could", "can", "must", "should"],
+        [2, "You ___ eat more fruit — it's good for you.", "should", "mustn't", "can't", "needn't"]
       ]
     },
     {
@@ -296,7 +346,12 @@ FB.addSubject({
         [3, "«If I won the lottery…» — how likely is it?", "Not very likely (imaginary)", "Very likely", "It has already happened", "It's a scientific fact"],
         [3, "If he ___ harder, he would get better marks.", "worked", "works", "will work", "has worked"],
         [3, "I'll lend you my bike ___ you bring it back tomorrow.", "if", "unless", "so", "because of"],
-        [3, "Which sentence is a Zero Conditional?", "If you press this button, the light comes on.", "If you press this button, the light will come on.", "If you pressed this button, the light would come on.", "If you will press this button, the light comes on."]
+        [3, "Which sentence is a Zero Conditional?", "If you press this button, the light comes on.", "If you press this button, the light will come on.", "If you pressed this button, the light would come on.", "If you will press this button, the light comes on."],
+        [1, "If you drop a glass, it ___ .", "breaks", "broke", "would break to", "breaking"],
+        [2, "If I ___ you, I'd tell her the truth.", "were", "am", "will be", "be"],
+        [2, "If we leave now, we ___ the train.", "will catch", "would catch", "caught", "catches"],
+        [2, "What would you buy if you ___ rich?", "were", "are", "will be", "be"],
+        [2, "If it ___ sunny tomorrow, we'll go to the beach.", "is", "will be", "was", "would be"]
       ]
     },
     {
@@ -322,7 +377,12 @@ FB.addSubject({
         [3, "The thief ___ by the police last night.", "was caught", "is caught", "was catched", "caught"],
         [3, "Why do we use the passive in «My car was stolen»?", "We don't know who did it", "The car stole something", "It is about the future", "The action is not finished"],
         [3, "These houses ___ in the 19th century.", "were built", "was built", "are built", "have build"],
-        [3, "Coffee ___ in Brazil. (a fact)", "is produced", "is producing", "produced", "produces by"]
+        [3, "Coffee ___ in Brazil. (a fact)", "is produced", "is producing", "produced", "produces by"],
+        [1, "The homework ___ by the students yesterday.", "was done", "did", "was did", "is doing"],
+        [2, "Many films ___ in Hollywood.", "are made", "make", "are making", "made it"],
+        [2, "The room ___ every day.", "is cleaned", "cleans", "is cleaning", "cleaned it"],
+        [2, "The museum ___ by the president in 1990.", "was opened", "opened it", "is opening", "was opening"],
+        [2, "The letter ___ tomorrow.", "will be sent", "will send", "is sent yesterday", "sent"]
       ]
     },
     {
@@ -348,7 +408,12 @@ FB.addSubject({
         [3, "Choose the correct question.", "Did your grandparents use to live in a village?", "Did your grandparents used to live in a village?", "Used your grandparents live in a village?", "Do your grandparents used to live in a village?"],
         [3, "She ___ be shy, but now she's very confident.", "used to", "is used to", "uses to", "use to"],
         [3, "Which time expression fits best with «used to»?", "when I was young", "tomorrow", "next year", "right now"],
-        [3, "People ___ write letters, but now they send messages.", "used to", "are used to", "get used", "use to"]
+        [3, "People ___ write letters, but now they send messages.", "used to", "are used to", "get used", "use to"],
+        [1, "I ___ to have long hair, but now it's short.", "used", "use", "using", "uses"],
+        [2, "___ she use to live in Almaty?", "Did", "Does", "Was", "Used"],
+        [2, "They didn't ___ to like each other.", "use", "used", "using", "uses"],
+        [2, "There ___ to be a park here.", "used", "use", "uses", "using"],
+        [2, "My grandmother used to ___ stories every evening.", "tell", "telling", "told", "tells"]
       ]
     },
     {
@@ -374,7 +439,12 @@ FB.addSubject({
         [3, "He forgot ___ the door, so the cat ran out.", "to close", "closing", "close", "closed"],
         [3, "I remember ___ this film as a child — it was great.", "watching", "to watch", "watch", "watched"],
         [3, "It's no use ___ about it.", "worrying", "to worry", "worry", "worried"],
-        [3, "Choose the correct sentence.", "She suggested going to the cinema.", "She suggested to go to the cinema.", "She suggested go to the cinema.", "She suggested us to go to the cinema."]
+        [3, "Choose the correct sentence.", "She suggested going to the cinema.", "She suggested to go to the cinema.", "She suggested go to the cinema.", "She suggested us to go to the cinema."],
+        [1, "I can't stand ___ in queues.", "waiting", "to waiting", "wait", "waited"],
+        [2, "She promised ___ me with my homework.", "to help", "helping", "help", "helped"],
+        [2, "They're thinking about ___ to Spain.", "moving", "to move", "move", "moved"],
+        [2, "I need ___ some bread.", "to buy", "buying", "buy", "bought"],
+        [2, "He is afraid of ___ alone.", "being", "to be", "be", "been"]
       ]
     },
     {
@@ -400,7 +470,12 @@ FB.addSubject({
         [3, "I've lost the key ___ opens this door.", "that", "what", "who", "where"],
         [3, "That's the restaurant ___ we had dinner last week.", "where", "which", "whose", "what"],
         [3, "Find the mistake: «This is the teacher which taught me English.»", "which → who", "is → was", "taught → teached", "me → my"],
-        [3, "Which sentence is correct?", "The people we met on holiday were friendly.", "The people which we met on holiday were friendly.", "The people whose we met on holiday were friendly.", "The people where we met on holiday were friendly."]
+        [3, "Which sentence is correct?", "The people we met on holiday were friendly.", "The people which we met on holiday were friendly.", "The people whose we met on holiday were friendly.", "The people where we met on holiday were friendly."],
+        [1, "The woman ___ called you is my teacher.", "who", "which", "where", "whose"],
+        [2, "I like films ___ have happy endings.", "that", "who", "where", "whose"],
+        [2, "This is the town ___ my father grew up.", "where", "which", "who", "whose"],
+        [2, "I know a girl ___ brother is an astronaut.", "whose", "who", "which", "where"],
+        [2, "The cake ___ she made was delicious.", "that", "who", "where", "whose"]
       ]
     },
     {
@@ -426,7 +501,12 @@ FB.addSubject({
         [3, "Wait for me! I'll be back ___ 10 minutes.", "in", "on", "since", "at"],
         [3, "She's been waiting ___ an hour.", "for", "since", "during", "in"],
         [3, "He jumped ___ the river and swam ___ the other side.", "into / to", "in / at", "into / at", "on / to"],
-        [3, "We arrived ___ London ___ midnight.", "in / at", "at / in", "to / at", "in / on"]
+        [3, "We arrived ___ London ___ midnight.", "in / at", "at / in", "to / at", "in / on"],
+        [1, "I'll see you ___ Tuesday.", "on", "in", "at", "to"],
+        [2, "We have a long holiday ___ summer.", "in", "on", "at", "by"],
+        [2, "The cat is hiding ___ the bed.", "under", "on top", "at", "between"],
+        [2, "She arrived ___ the airport late.", "at", "in", "to", "on"],
+        [2, "I was born ___ 15 March.", "on", "in", "at", "by"]
       ]
     },
     {
@@ -452,7 +532,12 @@ FB.addSubject({
         [3, "«This is my bag,» she said. → She said that ___ was her bag.", "that", "this", "these", "those"],
         [3, "«What time is it?» he asked. → He asked what time ___ .", "it was", "was it", "is it", "it is was"],
         [3, "«I'll call you tomorrow,» he said. → He said he would call me ___ .", "the next day", "tomorrow day", "yesterday", "the day before"],
-        [3, "Which sentence is correct?", "He asked me if I could help him.", "He asked me could I help him?", "He said me if I could help him.", "He told if I could help him."]
+        [3, "Which sentence is correct?", "He asked me if I could help him.", "He asked me could I help him?", "He said me if I could help him.", "He told if I could help him."],
+        [2, "«Can you help me?» she asked. → She asked me ___ help her.", "if I could", "can I", "could I", "that I can"],
+        [2, "«Sit down,» the doctor said to me. → The doctor told me ___ down.", "to sit", "sit", "sitting", "sat"],
+        [2, "«Don't touch it,» he said to us. → He told us ___ it.", "not to touch", "don't touch", "not touching", "no touch"],
+        [2, "In reported speech, «now» usually becomes…", "then", "there", "today", "ago"],
+        [2, "In reported speech, «today» usually becomes…", "that day", "the next day", "yesterday", "this day"]
       ]
     },
     {
@@ -478,7 +563,12 @@ FB.addSubject({
         [3, "I don't ___ well with my brother — we always argue.", "get on", "get up", "get off", "get over"],
         [3, "It took me two weeks to ___ the flu.", "get over", "get on", "get off", "get up"],
         [3, "Firefighters quickly ___ the fire.", "put out", "put off", "put on", "put up"],
-        [3, "He ___ smoking last year.", "gave up", "gave in", "gave out", "gave off"]
+        [3, "He ___ smoking last year.", "gave up", "gave in", "gave out", "gave off"],
+        [1, "Please ___ the light. It's dark in here.", "turn on", "turn off", "turn up", "turn down"],
+        [2, "Can you ___ this form, please?", "fill in", "fill up", "fill on", "fill at"],
+        [2, "I'm going to ___ the dress before I buy it.", "try on", "try out", "try in", "try off"],
+        [2, "We need to ___ early tomorrow — the flight is at 6.", "set off", "set up", "set in", "set on"],
+        [2, "Please ___ the rubbish before you leave.", "take out", "take off", "take up", "take after"]
       ]
     },
     {
@@ -504,7 +594,12 @@ FB.addSubject({
         [3, "I'm ___ about my holiday — we leave tomorrow!", "excited", "exciting", "excite", "excitement"],
         [3, "Choose the correct sentence.", "The lesson was confusing, so I was confused.", "The lesson was confused, so I was confusing.", "The lesson was confusing, so I was confusing.", "The lesson was confused, so I was confused."],
         [3, "A person who is unhappy because others have what they want is…", "jealous", "generous", "cheerful", "grateful"],
-        [3, "Which adjective is the opposite of «cheerful»?", "gloomy", "happy", "positive", "smiley"]
+        [3, "Which adjective is the opposite of «cheerful»?", "gloomy", "happy", "positive", "smiley"],
+        [1, "A person who always helps others and is nice to them is…", "kind", "rude", "mean", "selfish"],
+        [2, "I was ___ by the result. I didn't expect it at all.", "surprised", "surprising", "surprise", "surprisingly"],
+        [2, "The opposite of «hard-working» is…", "lazy", "clever", "honest", "brave"],
+        [2, "A person who thinks only about himself is…", "selfish", "generous", "helpful", "modest"],
+        [2, "The book was so ___ that I read it in one day.", "interesting", "interested", "interest", "interestingly"]
       ]
     },
     {
@@ -530,7 +625,12 @@ FB.addSubject({
         [3, "«I'm afraid we're fully booked» means…", "there are no free rooms", "the hotel is closed", "breakfast is free", "you must pay now"],
         [3, "The opposite of «departure» is…", "arrival", "delay", "journey", "flight"],
         [3, "«Go straight on and take the second turning on the left» — these are…", "directions", "a menu", "a weather forecast", "a timetable"],
-        [3, "A document that lets you enter some countries is a…", "visa", "receipt", "boarding pass", "menu"]
+        [3, "A document that lets you enter some countries is a…", "visa", "receipt", "boarding pass", "menu"],
+        [1, "Where do you catch a train?", "At the station", "At the airport", "At the port", "At the bus stop"],
+        [2, "A ___ ticket is only for going there, not back.", "one-way", "return", "double", "round"],
+        [2, "The place where ships stop is a…", "port", "station", "airport", "garage"],
+        [2, "You can sleep in a ___ when you go camping.", "tent", "suitcase", "ticket", "passport"],
+        [2, "«I'd like a window ___ on the plane, please.»", "seat", "chair", "sofa", "bench"]
       ]
     }
   ]

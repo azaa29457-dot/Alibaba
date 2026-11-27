@@ -3,6 +3,7 @@
   'use strict';
   var FB = root.FB;
   var E = FB.Engine;
+  try { E.history = E.makeHistory(localStorage, 'alibaba.seen'); } catch (e) { E.history = null; }
   var UI = FB.UI = {};
 
   UI.LETTERS = ['А', 'Б', 'В', 'Г'];
