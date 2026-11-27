@@ -30,6 +30,18 @@
     'пингвин', 'вулкан', 'робот', 'лимон', 'молния', 'кекс', 'панда', 'океан', 'шоколад', 'динозавр', 'алмаз', 'ёжик',
     'сокол', 'вафля', 'планета', 'ковбой', 'чипсы', 'мармелад', 'жираф', 'гитара', 'фламинго', 'торнадо', 'пончик',
     'единорог', 'кит', 'попкорн'];
+  // для английских предметов — английские пароли
+  B.PASSWORDS_EN = ['banana', 'rocket', 'dragon', 'pizza', 'cactus', 'rainbow', 'tiger', 'ninja', 'comet', 'pancake',
+    'penguin', 'volcano', 'robot', 'lemon', 'thunder', 'cupcake', 'panda', 'ocean', 'chocolate', 'dinosaur', 'diamond',
+    'hedgehog', 'falcon', 'waffle', 'planet', 'cowboy', 'popcorn', 'giraffe', 'guitar', 'flamingo', 'tornado', 'donut',
+    'unicorn', 'whale', 'marshmallow', 'pirate'];
+  B.PASS_CHOICES = 5;   // из скольких паролей игрок выбирает свой
+  B.GUESS_CHOICES = 3;  // из скольких угадывает пароль соперника
+  /* Английский предмет — если все выбранные темы из английских курсов */
+  B.langOf = function (topicKeys) {
+    var keys = topicKeys || [];
+    return keys.length && keys.every(function (k) { return /^english/i.test(String(k).split('/')[0]); }) ? 'en' : 'ru';
+  };
 
   function rnd(n) { return Math.floor(E.random() * n); }
   function rint(a, b) { return a + rnd(b - a + 1); }
@@ -120,7 +132,7 @@
       kind: 'blooket', mode: 'blooket', game: game, id: Math.random().toString(36).slice(2, 10), v: 1, created: now,
       code: cfg.code || null,
       cfg: {
-        topicKeys: (cfg.topicKeys || []).slice(), minutes: minutes, game: game,
+        topicKeys: (cfg.topicKeys || []).slice(), minutes: minutes, game: game, lang: B.langOf(cfg.topicKeys),
         title: cfg.title || 'Викторина', subtitle: cfg.subtitle || '', theme: cfg.theme || 'violet', winVideo: cfg.winVideo || ''
       },
       pool: makePool(cfg.topicKeys), phase: 'lobby', start: null, ends: null, frenzy: 0,
@@ -151,9 +163,9 @@
     p.pv++;
   }
   function setSt(p, st) { p.st = st; p.step++; p.pv++; }
-  function threePasswords(except) {
-    var pool = E.shuffle(B.PASSWORDS.filter(function (w) { return w !== except; }));
-    return pool.slice(0, 3);
+  function passwords(s, n, except) {
+    var list = s.cfg.lang === 'en' ? B.PASSWORDS_EN : B.PASSWORDS;
+    return E.shuffle(list.filter(function (w) { return w !== except; })).slice(0, n);
   }
 
   function nextQ(s, p) {
@@ -165,7 +177,7 @@
   }
   function enter(s, p) {
     // игрок начинает играть: в «Кибер-хаке» сначала выбирает пароль
-    if (s.game === 'hack' && !p.pass) { p.passOpts = threePasswords(); setSt(p, 'pass'); }
+    if (s.game === 'hack' && !p.pass) { p.passOpts = passwords(s, B.PASS_CHOICES); setSt(p, 'pass'); }
     else nextQ(s, p);
   }
 
@@ -332,8 +344,8 @@
             ev.push({ type: 'bswap' });
             setSt(p, 'reveal');
           } else if (item.k === 'hack') {
-            var dec = threePasswords(t.pass).slice(0, 2);
-            p.guess = { id: t.id, opts: E.shuffle([t.pass || B.PASSWORDS[0]].concat(dec)) };
+            var real = t.pass || passwords(s, 1)[0];
+            p.guess = { id: t.id, opts: E.shuffle([real].concat(passwords(s, B.GUESS_CHOICES - 1, real))) };
             setSt(p, 'guess');
           }
           return true;
@@ -347,7 +359,7 @@
             var pct = rint(10, 40), got = Math.round(tg.score * pct / 100);
             addScore(tg, -got); addScore(p, got);
             p.res = { k: 'hackok', n: pct, delta: got, who: who(tg), word: word };
-            tg.repass = threePasswords(tg.pass);
+            tg.repass = passwords(s, B.PASS_CHOICES, tg.pass);
             alert(tg, got > 0 ? p.name + ' взламывает тебя и крадёт ' + got + ' крипты! Смени пароль.' : p.name + ' узнаёт твой пароль! Смени его, пока не поздно.', -1);
             if (got > 0) {
               feed(s, now, { k: 'hack', a: who(p), b: who(tg), img: 'unlock', txt: 'взлом: ' + got + ' крипты' });

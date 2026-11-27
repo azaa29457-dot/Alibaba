@@ -532,10 +532,12 @@
     FX.countTo(sc, mine.score);
     var key = 'b:' + view.phase + ':' + mine.st + ':' + mine.step;
     var main = UI.$('#phMain');
-    if (key !== bodyKey) { bodyKey = key; main.className = 'ph-main bk-ph b-' + mine.st; main.innerHTML = ''; main._html = null; }
+    var same = key === bodyKey;
+    if (!same) { bodyKey = key; main.className = 'ph-main bk-ph b-' + mine.st; main.innerHTML = ''; main._html = null; }
     shell.classList.toggle('k-bad', view.phase === 'play' && mine.st === 'wrong');
     shell.classList.remove('k-good');
-    UI.patch(main, bBody());
+    // пока ход отправлен и ответа ещё нет, экран не перерисовываем: на нём уже видно, что выбрал игрок
+    if (!(same && bkPend && bkPend.step === mine.step)) UI.patch(main, bBody());
     var wv = UI.$('#phWinVideo');
     if (wv && !wv.firstChild) UI.winVideo(wv);
     bFx();
@@ -662,20 +664,25 @@
     if (!nostep) { msg.step = mine.step; bkPend = { step: mine.step, msg: JSON.parse(JSON.stringify(msg)), t: Date.now(), tries: 1 }; }
     net.send(msg);
     FX.unlock(); FX.vibrate(15);
-    renderB();
+  }
+  /* Сразу показываем выбор: нажатая кнопка выделяется (сундук трясётся и открывается), остальные гаснут */
+  function chosen(t, sel) {
+    var main = UI.$('#phMain');
+    UI.$$(sel, main).forEach(function (b) { b.disabled = true; if (b !== t) b.classList.add('dim'); });
+    t.classList.add('chosen');
   }
   function onBClick(e) {
     var t = e.target.closest('button');
     if (!t || t.disabled || !mine) return;
     if (t.hasAttribute('data-leave')) { leave(); return; }
-    if (t.hasAttribute('data-brepass')) { bk('setpass', { word: t.getAttribute('data-brepass') }, true); return; }
+    if (t.hasAttribute('data-brepass')) { chosen(t, '[data-brepass]'); bk('setpass', { word: t.getAttribute('data-brepass') }, true); return; }
     if (bkPend && bkPend.step === mine.step) return;
-    if (t.hasAttribute('data-bopt')) bk('answer', { opt: Number(t.getAttribute('data-bopt')) });
-    else if (t.hasAttribute('data-bpass')) bk('setpass', { word: t.getAttribute('data-bpass') });
-    else if (t.hasAttribute('data-bpick')) bk('pick', { i: Number(t.getAttribute('data-bpick')) });
-    else if (t.hasAttribute('data-btarget')) bk('target', { target: t.getAttribute('data-btarget') });
-    else if (t.hasAttribute('data-bword')) bk('guess', { word: t.getAttribute('data-bword') });
-    else if (t.hasAttribute('data-bnext')) bk('next', {});
+    if (t.hasAttribute('data-bopt')) { chosen(t, '[data-bopt]'); bk('answer', { opt: Number(t.getAttribute('data-bopt')) }); }
+    else if (t.hasAttribute('data-bpass')) { chosen(t, '[data-bpass]'); bk('setpass', { word: t.getAttribute('data-bpass') }); }
+    else if (t.hasAttribute('data-bpick')) { chosen(t, '[data-bpick]'); FX.play('open'); bk('pick', { i: Number(t.getAttribute('data-bpick')) }); }
+    else if (t.hasAttribute('data-btarget')) { chosen(t, '[data-btarget]'); bk('target', { target: t.getAttribute('data-btarget') }); }
+    else if (t.hasAttribute('data-bword')) { chosen(t, '[data-bword]'); bk('guess', { word: t.getAttribute('data-bword') }); }
+    else if (t.hasAttribute('data-bnext')) { chosen(t, '[data-bnext]'); bk('next', {}); }
     else if (t.hasAttribute('data-bcast')) {
       var stepNow = mine.step;
       castStep = stepNow;
@@ -698,7 +705,7 @@
       if (mine.step !== bkPend.step) bkPend = null;
       else if (Date.now() - bkPend.t > 2500) {
         if (bkPend.tries < 4) { bkPend.t = Date.now(); bkPend.tries++; net.send(JSON.parse(JSON.stringify(bkPend.msg))); }
-        else { bkPend = null; net.send({ t: 'sync' }); renderB(); }
+        else { bkPend = null; bodyKey = null; net.send({ t: 'sync' }); renderB(); }
       }
     }
   }

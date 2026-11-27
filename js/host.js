@@ -126,13 +126,13 @@
     if (s.kind === 'blooket') {
       var to = (r.touched || []).slice();
       if (!r.ok && a.fromPhone && a.pid) to.push(a.pid); // ход не принят — телефон получит, что на самом деле
+      sendMe(to); // телефону — сразу, до перерисовки большого экрана
       if (r.ok) {
         dirty = true;
         if (['start', 'end', 'restart', 'join', 'kick', 'tick', 'addtime'].indexOf(a.type) >= 0) flush();
         render();
         fxEvents(r.events);
       }
-      sendMe(to);
       return r.ok;
     }
     if (r.ok) {
