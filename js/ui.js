@@ -618,9 +618,11 @@
       teamInputs += '<label class="team-input" style="--tc:' + E.TEAM_COLORS[i] + '"><span class="dot" aria-hidden="true"></span>' +
         '<span class="sr-only">Команда ' + (i + 1) + '</span><input type="text" maxlength="24" data-team="' + i + '" value="' + UI.esc(c.teams[i]) + '"></label>';
     }
-    var TR = FB.Traitor;
+    // «Предатель» есть только в биологии; в других предметах этой кнопки нет — там три режима
+    var TR = FB.Traitor, trOk = !!TR && !!S.selected[0] && S.selected[0].split('/')[0] === TR.SUBJECT;
+    if (c.mode === 'traitor' && !trOk) { c.mode = 'kahoot'; saveCfg(); }
     var isK = c.mode === 'kahoot', isB = c.mode === 'blooket', isT = c.mode === 'traitor';
-    var modes = [['screen', 'Baamboozle', 'screen'], ['kahoot', 'Kahoot', 'phones'], ['blooket', 'Blooket', 'blooket'], ['traitor', 'Предатель', 'traitor']].map(function (m) {
+    var modes = [['screen', 'Baamboozle', 'screen'], ['kahoot', 'Kahoot', 'phones'], ['blooket', 'Blooket', 'blooket'], ['traitor', 'Предатель', 'traitor']].filter(function (m) { return m[0] !== 'traitor' || trOk; }).map(function (m) {
       var on = c.mode === m[0];
       return '<button type="button" role="radio" aria-checked="' + on + '" class="mode' + (on ? ' on' : '') + '" data-mode="' + m[0] + '">' +
         '<img src="' + (m[0] === 'traitor' ? 'img/tr/traitor.svg' : 'img/ui/' + m[2] + '.webp') + '" alt="" draggable="false"><b>' + m[1] + '</b></button>';
@@ -654,7 +656,7 @@
           '<p class="set-note">Каждый играет на своём телефоне. Роли раздаются случайно: предатель, медик, шериф и мирные жители. ' +
           'У каждого поле из 50 вопросов: №1 — самый лёгкий, №50 — самый трудный. Верный ответ — номер × 10 монет, ошибка — минус половина.' +
           (c.traitors === 2 ? ' Двое предателей будет, если игроков 7 или больше.' : '') +
-          (avail < TR.SIZE ? ' В выбранных темах ' + avail + ' ' + UI.plural(avail, 'вопрос', 'вопроса', 'вопросов') + ' — остальные добавятся из других тем этого предмета.' : '') +
+          (avail < TR.SIZE ? ' В выбранных темах ' + avail + ' ' + UI.plural(avail, 'вопрос', 'вопроса', 'вопросов') + ' — остальные добавятся из других тем биологии.' : '') +
           ' Нужно хотя бы 4 игрока.</p>' : '') +
         (isK || isB || isT ? '' : row('Команды', '<div class="row-gap">' + seg('teamCount', [{ v: 2, t: '2' }, { v: 3, t: '3' }, { v: 4, t: '4' }], c.teamCount) +
           '<button type="button" class="dice-btn" id="randNames" aria-label="Случайные названия" title="Случайные названия"><img src="img/ui/dice.webp" alt=""></button></div>' +

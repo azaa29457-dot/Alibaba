@@ -1507,8 +1507,6 @@ img.kp-av { width: clamp(56px, 8vh, 84px); height: auto; animation: popIn .6s cu
 .bk-wait p { font-weight: 800; opacity: .9; text-align: center; }
 
 /* ======== Режим «Предатель»: день — небо, ночь — звёзды, утро — рассвет, голосование — фиолетовый зал ======== */
-.mode small { display: block; font-size: .72rem; font-weight: 700; opacity: .7; margin-left: 2px; }
-.mode[disabled] { opacity: .5; cursor: not-allowed; }
 .tr-game { color: #14122B; background: linear-gradient(180deg, #43AEFF 0%, #A6DDFF 100%); transition: background-color .6s; }
 .tr-game[data-ph="roles"] { color: #fff; background: radial-gradient(120% 90% at 50% 0%, #3E2C86 0%, #150C3A 100%); }
 .tr-game[data-ph="night"] {
