@@ -7,8 +7,9 @@
   var ANS_COLORS = ['#6A4DFF', '#008F7A', '#E06A00', '#E0337F'];
 
   var s = null;          // состояние игры (движок)
-  function G() { return s && s.kind === 'kahoot' ? FB.Kahoot : (s && s.kind === 'blooket' ? FB.Blooket : E); }
-  function isNetMode(m) { return m === 'phones' || m === 'kahoot' || m === 'blooket'; }
+  function G() { return s && s.kind === 'kahoot' ? FB.Kahoot : (s && s.kind === 'blooket' ? FB.Blooket : (s && s.kind === 'traitor' ? FB.Traitor : E)); }
+  function isNetMode(m) { return m === 'phones' || m === 'kahoot' || m === 'blooket' || m === 'traitor'; }
+  function personal() { return !!s && (s.kind === 'blooket' || s.kind === 'traitor'); } // у каждого телефона своя часть состояния
   var dirty = false, lastPub = 0; // Blooket: общая часть рассылается не чаще раза в 0,8 с
   var net = null;        // сеть (только режим с телефонами)
   var netStatus = null;
@@ -33,6 +34,10 @@
       var bm = g.s.phase === 'play' ? Math.max(1, Math.ceil((g.s.ends - (g.t || 0)) / 60000)) : 0;
       return { title: g.s.cfg.title, left: bm, text: bm ? 'осталось около ' + bm + ' мин' : 'игра ещё не началась' };
     }
+    if (g.s.kind === 'traitor') {
+      if (!g.s.pool) return null;
+      return { title: g.s.cfg.title, left: 1, text: g.s.day ? 'идёт день ' + g.s.day : 'игра ещё не началась' };
+    }
     return g.s.tiles ? { title: g.s.cfg.title, left: E.leftTiles(g.s) } : null;
   };
   H.clearSave = function () { UI.store.del('alibaba.host'); };
@@ -44,7 +49,8 @@
     H.stop();
     if (isNetMode(cfg.mode)) cfg.code = FB.Net.makeCode();
     s = cfg.mode === 'kahoot' ? FB.Kahoot.create(cfg, Date.now()) :
-      (cfg.mode === 'blooket' ? FB.Blooket.create(cfg, Date.now()) : E.createGame(cfg, Date.now()));
+      (cfg.mode === 'blooket' ? FB.Blooket.create(cfg, Date.now()) :
+        (cfg.mode === 'traitor' ? FB.Traitor.create(cfg, Date.now()) : E.createGame(cfg, Date.now())));
     save();
     begin(false);
   };
@@ -61,6 +67,7 @@
       if (s.phase === 'play') s.ends = Date.now() + Math.max(30000, s.ends - (g.t || Date.now()));
       s.frenzy = 0;
     }
+    else if (s.kind === 'traitor') { if (s.until) s.until = Date.now() + Math.max(20000, s.until - (g.t || Date.now())); }
     else if (s.cur && s.cur.deadline) s.cur.deadline = Date.now() + s.cfg.timer * 1000; // время на вопрос заново
     s.v++;
     save();
@@ -91,7 +98,7 @@
     timers.push(setInterval(function () {
       broadcast();
       // Blooket: раз в 5 с каждый телефон ещё раз получает свою часть (вдруг сообщение потерялось)
-      if (s && s.kind === 'blooket') sendMe(Object.keys(s.players).filter(function (k) { return s.players[k].online; }));
+      if (personal()) sendMe(Object.keys(s.players).filter(function (k) { return s.players[k].online; }));
     }, 5000));
     document.addEventListener('keydown', onKey);
     root.onbeforeunload = function (e) {
@@ -123,13 +130,13 @@
   H.act = function (a) {
     if (!s) return false;
     var r = G().act(s, a, Date.now());
-    if (s.kind === 'blooket') {
+    if (personal()) {
       var to = (r.touched || []).slice();
       if (!r.ok && a.fromPhone && a.pid) to.push(a.pid); // ход не принят — телефон получит, что на самом деле
       sendMe(to); // телефону — сразу, до перерисовки большого экрана
       if (r.ok) {
         dirty = true;
-        if (['start', 'end', 'restart', 'join', 'kick', 'addtime'].indexOf(a.type) >= 0 ||
+        if (['start', 'end', 'restart', 'join', 'kick', 'addtime', 'next', 'tick'].indexOf(a.type) >= 0 ||
           r.events.some(function (e) { return e.type === 'end'; })) flush();
         render();
         fxEvents(r.events);
@@ -164,12 +171,12 @@
   }
   function flush() { dirty = false; lastPub = Date.now(); save(); broadcast(); }
   function sendMe(pids) {
-    if (!net || !s || s.kind !== 'blooket') return;
-    var seen = {};
+    if (!net || !personal()) return;
+    var seen = {}, M = G();
     pids.forEach(function (pid) {
       if (seen[pid] || !s.players[pid]) return;
       seen[pid] = 1;
-      net.sendTo(pid, { t: 'me', s: FB.Blooket.me(s, pid) });
+      net.sendTo(pid, { t: 'me', s: M.me(s, pid) });
     });
   }
   /* Удалить игрока: сообщение уходит и лично, и всем каналам (телефон проверит, что это про него) — так оно не потеряется */
@@ -178,13 +185,14 @@
     H.act({ type: 'kick', pid: pid });
   }
   var BK_MOVES = ['answer', 'next', 'pick', 'target', 'guess', 'setpass', 'cast'];
+  var TR_MOVES = ['open', 'answer', 'back', 'choose', 'vote'];
 
   function onMsg(pid, m, via) {
     if (!s) return;
     var p = s.players[pid];
     if (m.t === 'hello') {
       var hi = { t: 'welcome', s: G().view(s) };
-      if (s.kind === 'blooket') hi.me = FB.Blooket.me(s, pid);
+      if (personal()) hi.me = G().me(s, pid);
       net.reply(via, pid, hi);
       if (p) touch(pid);
       return;
@@ -207,6 +215,10 @@
           H.act({ type: m.a, pid: pid, step: m.step == null ? null : Number(m.step), opt: Number(m.opt), i: Number(m.i),
             target: String(m.target || ''), word: String(m.word || ''), fromPhone: true });
         }
+        if (s.kind === 'traitor' && p && TR_MOVES.indexOf(m.a) >= 0) {
+          H.act({ type: m.a, pid: pid, step: m.step == null ? null : Number(m.step), opt: Number(m.opt), n: Number(m.n),
+            target: String(m.target || ''), fromPhone: true });
+        }
         break;
     }
   }
@@ -225,6 +237,16 @@
     });
   }
   function tick() {
+    if (s && s.kind === 'traitor') {
+      var nowT = Date.now();
+      if (['day', 'night', 'vote'].indexOf(s.phase) >= 0 && !s.winner) {
+        if (nowT >= s.until || FB.Traitor.allDone(s)) { H.act({ type: 'tick' }); return; }
+        var st = Math.ceil((s.until - nowT) / 1000);
+        if (st <= 5 && st !== lastTickSec) { lastTickSec = st; FX.play('tick'); }
+      }
+      if (dirty && nowT - lastPub > 800) flush();
+      return;
+    }
     if (s && s.kind === 'blooket') {
       var nowB = Date.now();
       if (s.phase === 'play') {
@@ -259,6 +281,7 @@
     raf = requestAnimationFrame(frame);
     if (s && s.kind === 'kahoot') { kFrame(); return; }
     if (s && s.kind === 'blooket') { bFrame(); return; }
+    if (s && s.kind === 'traitor') { tFrame(); return; }
     var fill = document.querySelector('.ov-q .ruler-fill');
     if (!fill || !s || !s.cur) return;
     var secEl = document.querySelector('.ov-q .ruler-sec');
@@ -307,6 +330,14 @@
         case 'bbig': FX.play('good'); FX.confetti({ count: 60, x: innerWidth * 0.8, y: innerHeight * 0.4, power: 8 }); break;
         case 'bfrenzy': FX.play('bonus'); FX.confetti({ count: 120, rain: true }); break;
         case 'bfail': FX.play('neutral'); break;
+        case 'tstart': FX.play('open'); break;
+        case 'tday': FX.play('join'); break;
+        case 'tnight': FX.play('neutral'); break;
+        case 'tmorning': FX.play('bonus'); break;
+        case 'tvote': FX.play('open'); break;
+        case 'tshot': case 'tcaught': setTimeout(function () { FX.play('good'); FX.confetti({ count: 120, y: innerHeight * 0.35 }); }, 400); break;
+        case 'tsaved': setTimeout(function () { FX.play('good'); }, 400); break;
+        case 'tout': setTimeout(function () { FX.play('bad'); }, 400); break;
       }
     });
   }
@@ -320,6 +351,7 @@
     var k = e.key;
     if (k === 'f' || k === 'F' || k === 'а' || k === 'А') { toggleFull(); return; }
     if (k === 'm' || k === 'M' || k === 'ь' || k === 'Ь') { toggleSound(); return; }
+    if (s.kind === 'traitor' || s.kind === 'blooket') return;
     if (s.kind === 'kahoot') {
       if ((k === ' ' || k === 'Enter') && (s.phase === 'res' || s.phase === 'board' || s.phase === 'get')) { H.act({ type: 'next' }); e.preventDefault(); }
       return;
@@ -353,6 +385,7 @@
     if (!s) return;
     if (s.kind === 'kahoot') { renderK(force); return; }
     if (s.kind === 'blooket') { renderB(force); return; }
+    if (s.kind === 'traitor') { renderT(force); return; }
     var v = E.view(s);
     var want = v.phase === 'lobby' ? 'lobby' : (v.phase === 'end' ? 'end' : 'game');
     if (force || built !== want) {
@@ -397,6 +430,7 @@
     var items = [];
     if (s.kind === 'kahoot' && s.phase === 'q') items.push(['close', 'Завершить вопрос']);
     if (s.kind === 'blooket' && s.phase === 'play') items.push(['addtime', 'Добавить 1 минуту']);
+    if (s.kind === 'traitor' && ['day', 'night', 'vote'].indexOf(s.phase) >= 0) items.push(['addtime', 'Добавить 30 секунд']);
     if (s.kind !== 'kahoot' && s.phase === 'board') items.push(['skip', 'Передать ход следующей команде']);
     if (s.phase !== 'end' && s.phase !== 'lobby') items.push(['end', 'Завершить игру и показать итоги']);
     items.push(['home', 'Выйти на главную']);
@@ -802,7 +836,8 @@
         '<div class="kh-bar">' +
           '<div class="kh-count"><b id="kCount">0</b><span id="kCountL">игроков</span></div>' +
           '<div class="kh-name">' + UI.wordmark('wordmark-sm') + '<span>' + esc(v.title) + '</span>' +
-            (v.kind === 'blooket' ? '<span class="bk-gname"><img src="img/bk/' + FB.Blooket.GAMES[v.game].img + '.webp" alt="">' + esc(FB.Blooket.GAMES[v.game].name) + '</span>' : '') + '</div>' +
+            (v.kind === 'blooket' ? '<span class="bk-gname"><img src="img/bk/' + FB.Blooket.GAMES[v.game].img + '.webp" alt="">' + esc(FB.Blooket.GAMES[v.game].name) + '</span>' : '') +
+            (v.kind === 'traitor' ? '<span class="bk-gname"><img src="img/tr/traitor.svg" alt="">Предатель: ' + v.cfg.traitors + ' ' + UI.plural(v.cfg.traitors, 'предатель', 'предателя', 'предателей') + ', ' + v.cfg.perDay + ' ' + UI.plural(v.cfg.perDay, 'вопрос', 'вопроса', 'вопросов') + ' в день</span>' : '') + '</div>' +
           '<button class="btn kh-start" type="button" id="kStart">Старт</button>' +
         '</div>' +
         '<div class="kh-players" id="kPlayers"></div>' +
@@ -812,6 +847,9 @@
     UI.$('#kStart').addEventListener('click', function () {
       FX.unlock();
       if (!Object.keys(s.players).length) { UI.toast('Подождите, пока зайдёт хотя бы один игрок'); return; }
+      if (s.kind === 'traitor' && Object.keys(s.players).length < FB.Traitor.MIN_PLAYERS) {
+        UI.toast('Нужно хотя бы ' + FB.Traitor.MIN_PLAYERS + ' игрока: предатель, медик, шериф и мирный житель'); return;
+      }
       H.act({ type: 'start' });
     });
     UI.$('#kPlayers').addEventListener('click', function (e) {
@@ -1037,5 +1075,211 @@
         if (fe && fe.textContent !== sec) fe.textContent = sec;
       }
     }
+  }
+  /* ================= Режим «Предатель»: день — вопросы, ночь — ходы ролей, утро, голосование ================= */
+  function trImg(name, cls) { return '<img class="' + (cls || 'tr-i') + '" src="img/tr/' + name + '.svg" alt="" draggable="false">'; }
+  function roleOf(r) { return FB.Traitor.ROLES[r] || { name: '', img: 'civ' }; }
+  var T_PH = {
+    roles: ['traitor', 'Роли розданы'], day: ['day', 'День'], night: ['night', 'Ночь'],
+    morning: ['morning', 'Утро'], vote: ['vote', 'Голосование'], verdict: ['vote', 'Итоги голосования']
+  };
+  function renderT(force) {
+    var v = FB.Traitor.view(s);
+    var want = v.phase === 'lobby' ? 'k-lobby' : (v.phase === 'end' ? 't-end' : 't-game');
+    if (force || built !== want) {
+      built = want;
+      if (want === 'k-lobby') buildKLobby(v);
+      else if (want === 't-end') buildTEnd(v);
+      else buildTGame(v);
+    }
+    if (want === 'k-lobby') updateKLobby(v);
+    else if (want === 't-game') updateTGame(v);
+  }
+  function buildTGame(v) {
+    var url = UI.joinUrl(v.code), host = url.replace(/^https?:\/\//, '').replace(/\?.*$/, '');
+    UI.screen('t-game',
+      '<div class="kh tr tr-game" data-ph="' + v.phase + '">' + tools(v) +
+        '<header class="tr-top">' +
+          '<div class="tr-phase" id="tPhase"></div>' +
+          '<div class="tr-clock" id="tClock" role="timer" aria-label="Осталось времени" hidden><span id="tTimer"></span></div>' +
+          '<div class="bk-join"><span>Можно зайти и сейчас</span><b>' + esc(host) + '</b><span>PIN <b>' + esc(UI.fmtCode(v.code)) + '</b></span></div>' +
+        '</header>' +
+        '<main class="tr-main">' +
+          '<section class="tr-stage" id="tStage" aria-live="polite"></section>' +
+          '<section class="tr-people" id="tPeople" aria-label="Игроки"></section>' +
+        '</main>' +
+        '<footer class="tr-ctl" id="tCtl"></footer>' +
+      '</div>');
+    bindTop(UI.$('.tr .bz-tools'));
+    UI.$('#tCtl').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-t]');
+      if (!b) return;
+      FX.unlock();
+      H.act({ type: b.getAttribute('data-t') });
+    });
+  }
+  function tNews(list) {
+    return (list || []).map(function (n, i) {
+      var r = n.role ? roleOf(n.role) : null, txt = '', img = 'sleep', cls = '';
+      switch (n.k) {
+        case 'out': img = 'traitor'; cls = 'bad'; txt = 'Жертва предателя этой ночью: <b>' + esc(n.p.name) + '</b>. Роль: ' + esc(r.name.toLowerCase()) + '.'; break;
+        case 'saved': img = 'saved'; cls = 'good'; txt = 'Предатель напал ночью, но медик спас: <b>' + esc(n.p.name) + '</b> остаётся в игре!'; break;
+        case 'clean': img = 'clean'; txt = 'Проверка шерифа: <b>' + esc(n.p.name) + '</b> — не предатель.'; break;
+        case 'shot': img = 'sheriff'; cls = 'good'; txt = 'Шериф вычислил предателя: <b>' + esc(n.p.name) + '</b>!'; break;
+        default: txt = 'Ночь прошла спокойно.';
+      }
+      return '<li class="tr-news ' + cls + '" style="--i:' + i + '">' + trImg(img, 'tr-ni') + (n.p ? UI.avImg(n.p.av) : '') + '<span>' + txt + '</span></li>';
+    }).join('');
+  }
+  function tWinner(v) {
+    if (!v.winner) return '';
+    var town = v.winner === 'town';
+    return '<div class="tr-win ' + (town ? 'good' : 'bad') + '">' + trImg(town ? 'civ' : 'traitor', 'tr-wi') +
+      '<b>' + (town ? 'Все предатели выбыли — мирные жители победили!' : (v.cfg.traitors > 1 ? 'Предатели победили!' : 'Предатель остался один на один — он победил!')) + '</b></div>';
+  }
+  function tVerdict(v) {
+    var d = v.verdict, byId = {};
+    v.players.forEach(function (p) { byId[p.id] = p; });
+    var rows = Object.keys(d.votes).sort(function (a, b) { return d.votes[b].length - d.votes[a].length; }).map(function (id) {
+      var p = byId[id] || { name: '?', av: 'cat' }, out = d.out && d.out.id === id;
+      return '<li class="' + (out ? 'out' : '') + '">' + UI.avImg(p.av) + '<b>' + esc(p.name) + '</b><span class="tr-vn">' + d.votes[id].length + '</span>' +
+        '<span class="tr-voters">' + d.votes[id].map(function (vid) { return byId[vid] ? UI.avImg(byId[vid].av) : ''; }).join('') + '</span></li>';
+    });
+    if (d.skip.length) rows.push('<li class="skip"><span class="tr-skipi">⏭</span><b>Пропустить</b><span class="tr-vn">' + d.skip.length + '</span><span class="tr-voters">' +
+      d.skip.map(function (vid) { return byId[vid] ? UI.avImg(byId[vid].av) : ''; }).join('') + '</span></li>');
+    var res;
+    if (d.out) {
+      var bad = d.role === 'traitor';
+      res = '<p class="tr-res ' + (bad ? 'good' : 'bad') + '">' + UI.avImg(d.out.av) + '<span><b>' + esc(d.out.name) + '</b> выбывает. ' +
+        (bad ? 'Это предатель!' : 'Это не предатель. Роль: ' + esc(roleOf(d.role).name.toLowerCase()) + '.') + '</span></p>';
+    } else {
+      res = '<p class="tr-res">' + ({ none: 'Никто не проголосовал — никто не выбывает.', tie: 'Голоса разделились поровну — никто не выбывает.', skip: 'Большинство решило пропустить — никто не выбывает.' })[d.why] + '</p>';
+    }
+    return '<h2 class="tr-h">Кто за кого голосовал</h2>' + (rows.length ? '<ol class="tr-votes">' + rows.join('') + '</ol>' : '') + res;
+  }
+  function updateTGame(v) {
+    var root = UI.$('.tr-game');
+    root.setAttribute('data-ph', v.phase);
+    var ph = T_PH[v.phase] || ['day', ''];
+    UI.patch(UI.$('#tPhase'), trImg(ph[0], 'tr-pi') + '<span><b>' + ph[1] + (v.phase === 'day' || v.phase === 'night' ? ' ' + v.day : '') + '</b><small>' + esc(v.title) + '</small></span>');
+    UI.$('#tClock').hidden = v.left == null || !!v.winner;
+    var stage = '', inGame = v.players.filter(function (p) { return p.inGame; });
+    var aliveN = inGame.filter(function (p) { return p.alive; }).length;
+    switch (v.phase) {
+      case 'roles': {
+        var k = v.cfg.traitors, n = v.counts.total;
+        stage = '<h2 class="tr-h">Посмотрите свою роль на телефоне</h2><p class="tr-p">Никому её не показывайте! Среди вас:</p>' +
+          '<ul class="tr-roles">' +
+            '<li>' + trImg('traitor') + '<b>' + k + '</b><span>' + (k > 1 ? 'предателя' : 'предатель') + '</span></li>' +
+            '<li>' + trImg('medic') + '<b>1</b><span>медик</span></li>' +
+            '<li>' + trImg('sheriff') + '<b>1</b><span>шериф</span></li>' +
+            '<li>' + trImg('civ') + '<b>' + Math.max(0, n - k - 2) + '</b><span>' + UI.plural(Math.max(0, n - k - 2), 'мирный житель', 'мирных жителя', 'мирных жителей') + '</span></li>' +
+          '</ul>' +
+          '<p class="tr-p small">Мирные побеждают, если вычислят всех предателей. Предатель — если останется один на один с последним игроком.</p>';
+        break;
+      }
+      case 'day': {
+        var top = v.players.filter(function (p) { return p.inGame; }).slice().sort(function (a, b) { return b.coins - a.coins; }).slice(0, 5);
+        stage = '<h2 class="tr-h">Отвечайте на вопросы</h2>' +
+          '<p class="tr-p">На телефоне поле 1–50: чем больше номер, тем труднее вопрос. Верно — номер × 10 монет, ошибка — минус половина. ' +
+          'За день можно открыть ' + v.cfg.perDay + ' ' + UI.plural(v.cfg.perDay, 'вопрос', 'вопроса', 'вопросов') + '.</p>' +
+          '<p class="tr-tip">' + trImg('clue', 'tr-ti') + '<span>3 верных ответа за день — улика: кто точно не предатель</span></p>' +
+          '<h3 class="tr-h3">Больше всех монет</h3><ol class="tr-rich">' + top.map(function (p) {
+            return '<li>' + UI.avImg(p.av) + '<span>' + esc(p.name) + '</span><b>' + trImg('coin', 'tr-ci') + p.coins + '</b></li>';
+          }).join('') + '</ol>';
+        break;
+      }
+      case 'night':
+        stage = '<h2 class="tr-h">Город засыпает…</h2>' +
+          '<p class="tr-p">Предатель выбирает, кого выбить. Медик — кого вылечить. Шериф — кого проверить. Мирные отмечают, кого подозревают.</p>' +
+          '<div class="tr-done"><b>' + v.doneN + '</b><span>из ' + v.need + ' сделали выбор</span></div>';
+        break;
+      case 'morning':
+        stage = '<h2 class="tr-h">Что случилось ночью</h2><ol class="tr-newsl">' + tNews(v.news) + '</ol>' + tWinner(v) +
+          (v.winner ? '' : '<p class="tr-p">Обсудите, кто предатель. Потом — голосование.</p>');
+        break;
+      case 'vote':
+        stage = '<h2 class="tr-h">Кого выгоняем?</h2>' +
+          '<p class="tr-p">Голосуйте на телефонах. У кого больше всех голосов — выбывает. Ничья — никто не выбывает.</p>' +
+          '<div class="tr-done"><b>' + v.doneN + '</b><span>из ' + v.need + ' проголосовали</span></div>' +
+          (v.news.length ? '<ol class="tr-newsl small">' + tNews(v.news) + '</ol>' : '');
+        break;
+      case 'verdict':
+        stage = tVerdict(v) + tWinner(v);
+        break;
+    }
+    UI.patch(UI.$('#tStage'), stage);
+    UI.patch(UI.$('#tPeople'), '<p class="tr-alive">В игре: <b>' + aliveN + '</b> из ' + inGame.length + '</p><ul class="tr-grid">' + inGame.map(function (p) {
+      var st = '';
+      if (!p.alive) st = '<span class="tr-st out">' + trImg(roleOf(p.out.role).img, 'tr-si') + esc(roleOf(p.out.role).name) + '</span>';
+      else if (v.phase === 'day') {
+        var dots = '';
+        for (var i = 0; i < v.cfg.perDay; i++) dots += '<i class="' + (i < p.dayN ? 'on' : '') + '"></i>';
+        st = '<span class="tr-dots" aria-label="Ответил на ' + p.dayN + ' из ' + v.cfg.perDay + '">' + dots + '</span>';
+      } else if (v.phase === 'night' || v.phase === 'vote') st = '<span class="tr-st' + (p.done ? ' done' : '') + '">' + (p.done ? '✓ готово' : (v.phase === 'night' ? 'думает…' : 'голосует…')) + '</span>';
+      return '<li class="' + (p.alive ? '' : 'dead ') + (p.on ? '' : 'off') + '">' + UI.avImg(p.av) + (p.alive ? '' : trImg('ghost', 'tr-gh')) +
+        '<b>' + esc(p.name) + '</b>' + st + '</li>';
+    }).join('') + '</ul>');
+    var ctl = '';
+    if (v.winner) ctl = '<button class="btn kh-next btn-lg" type="button" data-t="next">Итоги игры</button>';
+    else switch (v.phase) {
+      case 'roles': ctl = '<button class="btn kh-next btn-lg" type="button" data-t="next">Начать день 1</button>'; break;
+      case 'day': ctl = '<button class="btn kh-skip" type="button" data-t="addtime">+30 секунд</button><button class="btn kh-next btn-lg" type="button" data-t="next">Наступает ночь</button>'; break;
+      case 'night': ctl = '<button class="btn kh-skip" type="button" data-t="addtime">+30 секунд</button><button class="btn kh-next btn-lg" type="button" data-t="next">Наступает утро</button>'; break;
+      case 'morning': ctl = '<button class="btn kh-next btn-lg" type="button" data-t="next">Голосование</button>'; break;
+      case 'vote': ctl = '<button class="btn kh-skip" type="button" data-t="addtime">+30 секунд</button><button class="btn kh-next btn-lg" type="button" data-t="next">Подвести итоги</button>'; break;
+      case 'verdict': ctl = '<button class="btn kh-next btn-lg" type="button" data-t="next">Начать день ' + (v.day + 1) + '</button>'; break;
+    }
+    UI.patch(UI.$('#tCtl'), ctl);
+  }
+  function tFrame() {
+    if (!s || !s.until || ['day', 'night', 'vote'].indexOf(s.phase) < 0) return;
+    var el = document.getElementById('tTimer');
+    if (!el) return;
+    var t = fmtClock(s.until - Date.now());
+    if (el.textContent !== t) el.textContent = t;
+    var c = document.getElementById('tClock');
+    if (c) c.classList.toggle('low', s.until - Date.now() <= 10000);
+  }
+  function buildTEnd(v) {
+    var P = v.players.filter(function (p) { return p.inGame; }).sort(function (a, b) { return b.coins - a.coins; });
+    var town = v.winner === 'town';
+    var title = v.winner ? (town ? 'Мирные жители победили!' : (v.cfg.traitors > 1 ? 'Предатели победили!' : 'Предатель победил!')) : 'Игра окончена';
+    var pod = [P[1], P[0], P[2]].map(function (p, k) {
+      if (!p) return '<div class="kp empty"></div>';
+      var place = [2, 1, 3][k];
+      return '<div class="kp kp' + place + '">' + UI.avImg(p.av, 'av kp-av') + '<span class="kp-name">' + esc(p.name) + '</span><span class="kp-score">' + trImg('coin', 'tr-ci') + p.coins + '</span>' +
+        '<div class="kp-bar"><img src="img/ui/medal' + place + '.webp" alt="' + place + ' место"></div></div>';
+    }).join('');
+    var roles = FB.Traitor.ORDER.map(function (r) {
+      var ps = P.filter(function (p) { return p.role === r; });
+      if (!ps.length) return '';
+      return '<div class="tr-rg r-' + r + '">' + trImg(roleOf(r).img, 'tr-rgi') + '<span><small>' + esc(ps.length > 1 && roleOf(r).many ? roleOf(r).many : roleOf(r).name) + '</small>' +
+        ps.map(function (p) { return '<b class="' + (p.alive ? '' : 'dead') + '">' + UI.avImg(p.av) + esc(p.name) + '</b>'; }).join('') + '</span></div>';
+    }).join('');
+    var sus = v.sus ? '<p class="tr-sus">Больше всех подозревали: <b>' + esc(v.sus.p.name) + '</b> (' + v.sus.n + ' ' + UI.plural(v.sus.n, 'раз', 'раза', 'раз') + ') — ' +
+      (v.sus.role === 'traitor' ? 'и не зря, это предатель!' : 'а это ' + esc(roleOf(v.sus.role).name.toLowerCase()) + '.') + '</p>' : '';
+    UI.screen('t-end',
+      '<div class="kh kh-end tr tr-end" data-win="' + (v.winner || 'none') + '">' + tools(v) +
+        '<h1 class="kh-end-title tr-end-title">' + trImg(v.winner ? (town ? 'civ' : 'traitor') : 'ghost', 'tr-endi') + '<span>' + title + '</span></h1>' +
+        (v.winner ? '<p class="tr-bonus">Победившая сторона получает +' + FB.Traitor.WIN_BONUS + ' монет</p>' : '') +
+        '<div class="tr-rgs">' + roles + '</div>' + sus +
+        '<div class="kh-end-row">' +
+          '<div class="kh-end-left"><div class="kh-podium">' + pod + '</div>' +
+            (P.length > 3 ? '<ol class="kh-rest" start="4">' + P.slice(3, 13).map(function (p) { return '<li>' + UI.avImg(p.av) + '<span>' + esc(p.name) + '</span><b>' + p.coins + '</b></li>'; }).join('') + '</ol>' : '') +
+          '</div>' +
+          '<div class="win-video" id="winVideo"></div>' +
+        '</div>' +
+        '<div class="win-actions">' +
+          '<button class="btn bz-primary btn-lg" type="button" id="againBtn">Играть ещё раз</button>' +
+          '<button class="btn bz-secondary" type="button" id="newBtn">Новая игра</button>' +
+          '<button class="btn bz-secondary" type="button" id="homeBtn">На главную</button>' +
+        '</div>' +
+      '</div>');
+    bindTop(UI.$('.kh .bz-tools'));
+    UI.winVideo(UI.$('#winVideo'), s.cfg.winVideo);
+    UI.$('#againBtn').addEventListener('click', function () { H.act({ type: 'restart' }); });
+    UI.$('#newBtn').addEventListener('click', function () { H.clearSave(); closePlayers(); s = null; H.stop(); UI.setup(); });
+    UI.$('#homeBtn').addEventListener('click', function () { H.clearSave(); closePlayers(); s = null; H.stop(); UI.home(); });
   }
 })(window);

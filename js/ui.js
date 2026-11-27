@@ -406,7 +406,7 @@
   var DEFAULT_CFG = {
     mode: 'screen', teamCount: 2, teams: ['Команда 1', 'Команда 2', 'Команда 3', 'Команда 4'],
     count: 16, timer: 30, theme: 'violet', winVideo: '', bgame: 'gold', minutes: 7,
-    powerOn: true, freq: 'mid', powerIds: E.PRESETS.classic.slice()
+    powerOn: true, freq: 'mid', powerIds: E.PRESETS.classic.slice(), traitors: 1, perDay: 5
   };
   var S = null;
 
@@ -418,7 +418,9 @@
     out.powerIds = (out.powerIds || []).filter(function (id) { return E.POWER[id]; });
     if (!out.powerIds.length) out.powerIds = E.PRESETS.classic.slice();
     if ([2, 3, 4].indexOf(out.teamCount) < 0) out.teamCount = 2;
-    if (out.mode !== 'screen' && out.mode !== 'blooket') out.mode = 'kahoot';
+    if (['screen', 'blooket', 'traitor'].indexOf(out.mode) < 0) out.mode = 'kahoot';
+    if (out.traitors !== 2) out.traitors = 1;
+    if (FB.Traitor && FB.Traitor.PER_DAY.indexOf(out.perDay) < 0) out.perDay = 5;
     if (!FB.Blooket || !FB.Blooket.GAMES[out.bgame]) out.bgame = 'gold';
     if (FB.Blooket && FB.Blooket.MINUTES.indexOf(out.minutes) < 0) out.minutes = 7;
     return out;
@@ -616,11 +618,15 @@
       teamInputs += '<label class="team-input" style="--tc:' + E.TEAM_COLORS[i] + '"><span class="dot" aria-hidden="true"></span>' +
         '<span class="sr-only">Команда ' + (i + 1) + '</span><input type="text" maxlength="24" data-team="' + i + '" value="' + UI.esc(c.teams[i]) + '"></label>';
     }
-    var isK = c.mode === 'kahoot', isB = c.mode === 'blooket';
-    var modes = [['screen', 'Baamboozle', 'screen'], ['kahoot', 'Kahoot', 'phones'], ['blooket', 'Blooket', 'blooket']].map(function (m) {
-      var on = c.mode === m[0];
-      return '<button type="button" role="radio" aria-checked="' + on + '" class="mode' + (on ? ' on' : '') + '" data-mode="' + m[0] + '">' +
-        '<img src="img/ui/' + m[2] + '.webp" alt="" draggable="false"><b>' + m[1] + '</b></button>';
+    // «Предатель» пока только для биологии
+    var TR = FB.Traitor, trOk = !!TR && S.selected[0] && S.selected[0].split('/')[0] === TR.SUBJECT;
+    if (c.mode === 'traitor' && !trOk) { c.mode = 'kahoot'; saveCfg(); }
+    var isK = c.mode === 'kahoot', isB = c.mode === 'blooket', isT = c.mode === 'traitor';
+    var modes = [['screen', 'Baamboozle', 'screen'], ['kahoot', 'Kahoot', 'phones'], ['blooket', 'Blooket', 'blooket'], ['traitor', 'Предатель', 'traitor']].map(function (m) {
+      var on = c.mode === m[0], off = m[0] === 'traitor' && !trOk;
+      return '<button type="button" role="radio" aria-checked="' + on + '" class="mode' + (on ? ' on' : '') + '" data-mode="' + m[0] + '"' +
+        (off ? ' disabled title="Пока только для биологии"' : '') + '>' +
+        '<img src="' + (m[0] === 'traitor' ? 'img/tr/traitor.svg' : 'img/ui/' + m[2] + '.webp') + '" alt="" draggable="false"><b>' + m[1] + '</b>' + (off ? '<small>только биология</small>' : '') + '</button>';
     }).join('');
     var BL = FB.Blooket;
     var bgames = isB ? BL.ORDER.map(function (id) {
@@ -646,16 +652,23 @@
         (isB ? row('Игра', '<div class="bgames" role="radiogroup">' + bgames + '</div>', 'tall') +
           row('Время', seg('minutes', BL.MINUTES.map(function (n) { return { v: n, t: n + ' мин' }; }), c.minutes)) +
           '<p class="set-note">Каждый отвечает на своём телефоне в своём темпе. Вопросы — из выбранных тем (' + Math.min(avail, BL.POOL_MAX) + ' ' + UI.plural(Math.min(avail, BL.POOL_MAX), 'вопрос', 'вопроса', 'вопросов') + '), у каждого в своём порядке.</p>' : '') +
-        (isK || isB ? '' : row('Команды', '<div class="row-gap">' + seg('teamCount', [{ v: 2, t: '2' }, { v: 3, t: '3' }, { v: 4, t: '4' }], c.teamCount) +
+        (isT ? row('Предатели', seg('traitors', [{ v: 1, t: '1 предатель' }, { v: 2, t: '2 предателя' }], c.traitors)) +
+          row('Вопросов в день', seg('perDay', TR.PER_DAY.map(function (n) { return { v: n, t: String(n) }; }), c.perDay)) +
+          '<p class="set-note">Каждый играет на своём телефоне. Роли раздаются случайно: предатель, медик, шериф и мирные жители. ' +
+          'У каждого поле из 50 вопросов: №1 — самый лёгкий, №50 — самый трудный. Верный ответ — номер × 10 монет, ошибка — минус половина.' +
+          (c.traitors === 2 ? ' Двое предателей будет, если игроков 7 или больше.' : '') +
+          (avail < TR.SIZE ? ' В выбранных темах ' + avail + ' ' + UI.plural(avail, 'вопрос', 'вопроса', 'вопросов') + ' — остальные добавятся из других тем биологии.' : '') +
+          ' Нужно хотя бы 4 игрока.</p>' : '') +
+        (isK || isB || isT ? '' : row('Команды', '<div class="row-gap">' + seg('teamCount', [{ v: 2, t: '2' }, { v: 3, t: '3' }, { v: 4, t: '4' }], c.teamCount) +
           '<button type="button" class="dice-btn" id="randNames" aria-label="Случайные названия" title="Случайные названия"><img src="img/ui/dice.webp" alt=""></button></div>' +
           '<div class="team-inputs">' + teamInputs + '</div>')) +
-        (isB ? '' : row('Вопросы', seg('count', opts.map(function (n) { return { v: n, t: String(n), disabled: !isK && !c.powerOn && n > avail }; }), c.count) +
+        (isB || isT ? '' : row('Вопросы', seg('count', opts.map(function (n) { return { v: n, t: String(n), disabled: !isK && !c.powerOn && n > avail }; }), c.count) +
           (!isK && c.count > avail ? '<p class="set-note">В выбранных темах ' + avail + ' ' + UI.plural(avail, 'вопрос', 'вопроса', 'вопросов') +
             ' — на поле из ' + c.count + ' плиток остальные ' + (c.count - avail) + ' станут бонусами. Чтобы все плитки были вопросами, выберите несколько тем или «Все темы».</p>' :
             (!isK && !c.powerOn && avail < 24 ? '<p class="set-note">Поле из 24 плиток без бонусов: нужно хотя бы 24 вопроса, а в выбранных темах ' + avail + '.</p>' : ''))) +
           row('Таймер', seg('timer', timers.map(function (n) { return { v: n, t: n ? n + ' с' : 'Нет' }; }), c.timer))) +
         row('Фон', '<div class="themes" role="radiogroup">' + themes + '</div>') +
-        (isK || isB ? '' : row('Бонусы', '<label class="switch"><input type="checkbox" id="powerOn"' + (c.powerOn ? ' checked' : '') + '><span class="sw" aria-hidden="true"></span><span class="sr-only">Бонусы</span></label>') +
+        (isK || isB || isT ? '' : row('Бонусы', '<label class="switch"><input type="checkbox" id="powerOn"' + (c.powerOn ? ' checked' : '') + '><span class="sw" aria-hidden="true"></span><span class="sr-only">Бонусы</span></label>') +
         (c.powerOn ?
           row('Частота', seg('freq', [{ v: 'low', t: 'Мало' }, { v: 'mid', t: 'Средне' }, { v: 'high', t: 'Много' }], c.freq)) +
           row('Power-ups', '<div class="pws">' + pws + '</div><button type="button" class="btn btn-ghost btn-small" data-preset="all">Выбрать все</button>', 'tall') : '')) +
@@ -696,7 +709,7 @@
       if ((t = e.target.closest('[data-theme-pick]'))) {
         S.cfg.theme = t.getAttribute('data-theme-pick'); UI.applyTheme(S.cfg.theme); saveCfg(); rerenderSettings(); return;
       }
-      if ((t = e.target.closest('[data-mode]'))) { S.cfg.mode = t.getAttribute('data-mode'); saveCfg(); rerenderSettings(); return; }
+      if ((t = e.target.closest('[data-mode]')) && !t.disabled) { S.cfg.mode = t.getAttribute('data-mode'); saveCfg(); rerenderSettings(); return; }
       if ((t = e.target.closest('[data-bgame]'))) { S.cfg.bgame = t.getAttribute('data-bgame'); FB.FX.play('click'); saveCfg(); rerenderSettings(); return; }
       if ((t = e.target.closest('.seg button'))) {
         var name = t.closest('.seg').getAttribute('data-seg');
@@ -758,7 +771,7 @@
     FB.Host.create({
       mode: c.mode, teams: names, topicKeys: S.selected.slice(),
       count: c.mode === 'kahoot' ? Math.min(c.count, avail) : c.count, timer: c.timer, theme: c.theme, winVideo: c.winVideo,
-      game: c.bgame, minutes: c.minutes,
+      game: c.bgame, minutes: c.minutes, traitors: c.traitors, perDay: c.perDay,
       powerups: { on: c.powerOn, freq: c.freq, ids: c.powerIds.slice() },
       title: title, subtitle: subtitle
     });
