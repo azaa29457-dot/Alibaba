@@ -111,8 +111,13 @@
       return;
     }
     if (m.t === 'kicked') {
+      if (m.to && m.to !== pid) return; // это про другого игрока
+      var kc = code;
       P.stop(true); UI.store.del('alibaba.player');
-      simple('kicked', '<h2>Организатор удалил вас из игры</h2>', '<div class="ph-actions"><button class="btn btn-yellow" id="homeBtn" type="button">На главную</button></div>');
+      simple('kicked', '<h2>Организатор удалил вас из игры</h2><p class="muted">Можно войти снова с новым ником.</p>',
+        '<div class="ph-actions"><button class="btn btn-yellow btn-lg" id="againBtn" type="button">Войти снова</button>' +
+        '<button class="btn btn-ghost" id="homeBtn" type="button">На главную</button></div>');
+      UI.$('#againBtn').addEventListener('click', function () { FX.unlock(); P.start(kc); });
       UI.$('#homeBtn').addEventListener('click', function () { try { history.replaceState(null, '', location.pathname); } catch (e) { } UI.home(); });
       return;
     }
@@ -125,7 +130,8 @@
 
   function takeMe(x) {
     if (!x || x.id !== pid) return false;
-    if (mine && x.pv < mine.pv) return false;
+    // старые данные отбрасываем, но если игрок заново вошёл (после удаления), счёт версий начинается сначала
+    if (mine && x.jn === mine.jn && x.pv < mine.pv) return false;
     if (bkPend && x.step !== bkPend.step) bkPend = null;
     mine = x; meAt = Date.now();
     return true;
@@ -515,6 +521,9 @@
       '<text x="68" y="62" text-anchor="middle" font-family="Unbounded, sans-serif" font-weight="900" font-size="44" fill="#2BE27A">?</text></svg>';
   }
   function renderB() {
+    // организатор удалил игрока, а сообщение об этом не дошло: игрока нет в общем списке — показываем вход заново
+    if (mine && !(joinedSent && Date.now() - joinedSent < 5000) &&
+        !view.players.some(function (x) { return x.id === pid; })) { mine = null; bkPend = null; }
     if (!mine) {
       if (joinedSent && Date.now() - joinedSent < 5000) return;
       profileScreen();

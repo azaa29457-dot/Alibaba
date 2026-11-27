@@ -433,7 +433,7 @@
     now = now || Date.now();
     var rk = B.ranking(s);
     var out = {
-      id: p.id, sid: s.id, pv: p.pv, step: p.step, st: p.st, score: p.score, place: p._place, of: rk.length,
+      id: p.id, sid: s.id, jn: p.joined, pv: p.pv, step: p.step, st: p.st, score: p.score, place: p._place, of: rk.length,
       right: p.right, wrong: p.wrong, lure: p.lure, pass: p.pass || null, repass: p.repass || null,
       alerts: p.alerts || [], name: p.name, av: p.av
     };

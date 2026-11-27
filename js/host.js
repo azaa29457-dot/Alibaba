@@ -171,6 +171,11 @@
       net.sendTo(pid, { t: 'me', s: FB.Blooket.me(s, pid) });
     });
   }
+  /* Удалить игрока: сообщение уходит и лично, и всем каналам (телефон проверит, что это про него) — так оно не потеряется */
+  function kickPlayer(pid) {
+    if (net) { net.sendTo(pid, { t: 'kicked', to: pid }); net.broadcast({ t: 'kicked', to: pid }); }
+    H.act({ type: 'kick', pid: pid });
+  }
   var BK_MOVES = ['answer', 'next', 'pick', 'target', 'guess', 'setpass', 'cast'];
 
   function onMsg(pid, m, via) {
@@ -471,7 +476,7 @@
         var p = s.players[pid];
         if (!p) return;
         UI.confirm('Удалить игрока «' + p.name + '» из игры?', 'Удалить').then(function (ok) {
-          if (ok && s.players[pid]) { if (net) net.sendTo(pid, { t: 'kicked' }); H.act({ type: 'kick', pid: pid }); }
+          if (ok && s.players[pid]) kickPlayer(pid);
         });
         return;
       }
@@ -805,7 +810,7 @@
       var pid = c.getAttribute('data-pid'), p = s.players[pid];
       if (!p) return;
       UI.confirm('Удалить игрока «' + p.name + '»?', 'Удалить').then(function (ok) {
-        if (ok && s.players[pid]) { if (net) net.sendTo(pid, { t: 'kicked' }); H.act({ type: 'kick', pid: pid }); }
+        if (ok && s.players[pid]) kickPlayer(pid);
       });
     });
     renderNet();
