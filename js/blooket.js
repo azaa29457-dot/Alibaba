@@ -25,6 +25,7 @@
   B.FRENZY_MS = 20000;      // «Клёв!»: 20 секунд все ловят вдвое больше
   B.FEED_MAX = 24;
   B.LURE_MAX = 4;
+  B.WRONG_MS = 3000;     // после неверного ответа — 3 секунды на правильный ответ, потом сам следующий вопрос
 
   /* Пароли как в Blooket (Crypto Hack): цифры, «клавиатурные», популярные слабые пароли, смешные длинные слова.
      Плюс к ним каждый раз добавляются случайные наборы букв и цифр. Во всех предметах одинаково. */
@@ -242,9 +243,15 @@
           list(s).forEach(function (pl) { enter(s, pl); touched.push(pl.id); });
           ev.push({ type: 'bstart' });
           return true;
-        case 'tick':
-          if (s.phase === 'play' && now >= s.ends) { finish(s, ev, touched); return true; }
-          return false;
+        case 'tick': {
+          if (s.phase !== 'play') return false;
+          if (now >= s.ends) { finish(s, ev, touched); return true; }
+          var moved = false;
+          list(s).forEach(function (pl) {
+            if (pl.st === 'wrong' && now >= (pl.until || 0)) { nextQ(s, pl); touched.push(pl.id); moved = true; }
+          });
+          return moved;
+        }
         case 'addtime':
           if (s.phase !== 'play') return false;
           s.ends = Math.max(s.ends, now) + 60000;
@@ -295,12 +302,13 @@
           } else {
             p.wrong++;
             p.res = { k: 'wrong', opt: o };
+            p.until = now + B.WRONG_MS;
             setSt(p, 'wrong');
           }
           return true;
         }
         case 'next':
-          if (!p || s.phase !== 'play' || ['wrong', 'reveal', 'catch'].indexOf(p.st) < 0) return false;
+          if (!p || s.phase !== 'play' || ['reveal', 'catch'].indexOf(p.st) < 0) return false; // после ошибки — только по таймеру
           if (a.step != null && Number(a.step) !== p.step) return false;
           touched.push(p.id);
           nextQ(s, p);
@@ -440,7 +448,10 @@
     var q = p.q ? s.pool[p.q.i] : null;
     if (q && (p.st === 'q' || p.st === 'wrong')) {
       out.q = { text: q.text, topic: q.topic, opts: p.q.perm.map(function (i) { return q.opts[i]; }) };
-      if (p.st === 'wrong') { out.q.correct = p.q.perm.indexOf(0); out.q.chosen = p.res ? p.res.opt : null; }
+      if (p.st === 'wrong') {
+        out.q.correct = p.q.perm.indexOf(0); out.q.chosen = p.res ? p.res.opt : null;
+        out.wait = Math.max(0, (p.until || now) - now); out.waitTotal = B.WRONG_MS;
+      }
     }
     if (p.st === 'pass') out.passOpts = p.passOpts;
     if (p.st === 'reveal' && p.box && p.box.pick != null) {

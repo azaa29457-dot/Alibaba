@@ -584,8 +584,12 @@
           '<p class="bk-topic">' + esc(mine.q.topic) + '</p><h2 class="ph-q k-q">' + esc(mine.q.text) + '</h2><div class="k-grid">' + mine.q.opts.map(function (o, i) {
             return '<button type="button" class="k-btn" data-bopt="' + i + '" style="--kc:' + KCOL[i] + '"' + dis + '><span class="kh-shape">' + SHAPES[i] + '</span><span>' + esc(o) + '</span></button>';
           }).join('') + '</div>';
-      case 'wrong':
-        return '<div class="k-res"><div class="k-res-ico">✗</div><h2>Неверно</h2><p class="k-right">Правильно: ' + esc(mine.q.opts[mine.q.correct]) + '</p></div>' + nextBtn(dis);
+      case 'wrong': {
+        var wl = Math.max(1, Math.ceil(waitLeft() / 1000));
+        return '<div class="k-res"><div class="k-res-ico">✗</div><h2>Неверно</h2><p class="k-right">Правильно: ' + esc(mine.q.opts[mine.q.correct]) + '</p></div>' +
+          '<div class="bk-wait" aria-live="off"><div class="bk-wait-ring" id="bkWaitRing" style="--p:' + (waitLeft() / (mine.waitTotal || 3000)).toFixed(3) + '"><b id="bkWaitN">' + wl + '</b></div>' +
+          '<p>Следующий вопрос через несколько секунд</p></div>';
+      }
       case 'chest':
         return top + '<div class="bk-center"><div class="k-res-ico bk-ok">✓</div><h2 class="ph-h">' + (view.game === 'hack' ? 'Верно! Выбери сервер' : 'Верно! Выбери сундук') + '</h2></div>' +
           '<div class="bk-chests">' + [0, 1, 2].map(function (i) {
@@ -619,6 +623,7 @@
     }
     return '<p class="muted">Ждём…</p>';
   }
+  function waitLeft() { return mine && mine.wait != null ? Math.max(0, mine.wait - (Date.now() - meAt)) : 0; }
   function lureHtml() {
     var L = mine.lure | 0, w = '';
     for (var i = 0; i <= FB.Blooket.LURE_MAX; i++) w += '<i class="' + (i <= L ? 'on' : '') + '"></i>';
@@ -709,6 +714,15 @@
       var remain = Math.max(0, view.left - (Date.now() - recvAt));
       el.firstChild.style.transform = 'scaleX(' + (remain / view.total).toFixed(4) + ')';
       el.classList.toggle('low', remain <= 10000);
+    }
+    if (mine && mine.st === 'wrong') {
+      var ring = document.getElementById('bkWaitRing'), nEl = document.getElementById('bkWaitN');
+      if (ring) {
+        var left = waitLeft();
+        ring.style.setProperty('--p', (left / (mine.waitTotal || 3000)).toFixed(3));
+        var t = String(Math.max(1, Math.ceil(left / 1000)));
+        if (nEl.textContent !== t) nEl.textContent = t;
+      }
     }
     if (bkPend && mine && net) {
       if (mine.step !== bkPend.step) bkPend = null;

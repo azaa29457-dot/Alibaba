@@ -129,7 +129,8 @@
       sendMe(to); // телефону — сразу, до перерисовки большого экрана
       if (r.ok) {
         dirty = true;
-        if (['start', 'end', 'restart', 'join', 'kick', 'tick', 'addtime'].indexOf(a.type) >= 0) flush();
+        if (['start', 'end', 'restart', 'join', 'kick', 'addtime'].indexOf(a.type) >= 0 ||
+          r.events.some(function (e) { return e.type === 'end'; })) flush();
         render();
         fxEvents(r.events);
       }
@@ -228,6 +229,9 @@
       var nowB = Date.now();
       if (s.phase === 'play') {
         if (nowB >= s.ends) { H.act({ type: 'tick' }); return; }
+        // кто ошибся 3 секунды назад — получает следующий вопрос
+        var due = Object.keys(s.players).some(function (k) { var pl = s.players[k]; return pl.st === 'wrong' && nowB >= (pl.until || 0); });
+        if (due) H.act({ type: 'tick' });
         var sb = Math.ceil((s.ends - nowB) / 1000);
         if (sb <= 10 && sb !== lastTickSec) { lastTickSec = sb; FX.play('tick'); }
       }
@@ -336,7 +340,13 @@
     FX.setMuted(!FX.isMuted());
     UI.$$('[data-act="sound"]').forEach(function (b) { b.innerHTML = soundIcon(); b.setAttribute('aria-label', FX.isMuted() ? 'Включить звук' : 'Выключить звук'); });
   }
-  function soundIcon() { return FX.isMuted() ? '🔇' : '🔊'; }
+  var ICO = {
+    close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/></svg>',
+    full: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    on: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.5h3.5l5-4v13l-5-4H3.5z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18.3 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg>',
+    off: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.5h3.5l5-4v13l-5-4H3.5z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M15.5 9.5l5 5M20.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg>'
+  };
+  function soundIcon() { return FX.isMuted() ? ICO.off : ICO.on; }
 
   /* ================= Рендер ================= */
   function render(force) {
@@ -522,9 +532,9 @@
   /* ---------- Игровое поле (как в Baamboozle: команды сверху, синие плитки) ---------- */
   function tools(v) {
     return '<div class="bz-tools">' +
-      '<button class="bz-btn" data-act="menu" type="button" aria-label="Меню" title="Меню">✕</button>' +
+      '<button class="bz-btn" data-act="menu" type="button" aria-label="Меню" title="Меню">' + ICO.close + '</button>' +
       '<button class="bz-btn" data-act="sound" type="button" aria-label="' + (FX.isMuted() ? 'Включить звук' : 'Выключить звук') + '" title="Звук (M)">' + soundIcon() + '</button>' +
-      '<button class="bz-btn" data-act="full" type="button" aria-label="Во весь экран" title="Во весь экран (F)">⛶</button>' +
+      '<button class="bz-btn" data-act="full" type="button" aria-label="Во весь экран" title="Во весь экран (F)">' + ICO.full + '</button>' +
       (isNetMode(v.mode) ? '<button class="bz-btn" data-act="code" type="button" aria-label="Код для входа" title="Код для входа">#</button>' : '') +
     '</div>';
   }

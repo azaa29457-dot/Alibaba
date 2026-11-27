@@ -608,6 +608,8 @@
     } else {
       opts = [16, 24]; // поле 4 × 4 или 4 × 6, как в Baamboozle
       if (opts.indexOf(c.count) < 0) c.count = 16;
+      // без бонусов поле из 24 плиток можно собрать, только если в темах есть 24 вопроса (вопросы не повторяются)
+      if (!c.powerOn && avail < 24 && c.count === 24) c.count = 16;
     }
     var teamInputs = '';
     for (var i = 0; i < c.teamCount; i++) {
@@ -647,7 +649,10 @@
         (isK || isB ? '' : row('Команды', '<div class="row-gap">' + seg('teamCount', [{ v: 2, t: '2' }, { v: 3, t: '3' }, { v: 4, t: '4' }], c.teamCount) +
           '<button type="button" class="dice-btn" id="randNames" aria-label="Случайные названия" title="Случайные названия"><img src="img/ui/dice.webp" alt=""></button></div>' +
           '<div class="team-inputs">' + teamInputs + '</div>')) +
-        (isB ? '' : row('Вопросы', seg('count', opts.map(function (n) { return { v: n, t: String(n) }; }), c.count)) +
+        (isB ? '' : row('Вопросы', seg('count', opts.map(function (n) { return { v: n, t: String(n), disabled: !isK && !c.powerOn && n > avail }; }), c.count) +
+          (!isK && c.count > avail ? '<p class="set-note">В выбранных темах ' + avail + ' ' + UI.plural(avail, 'вопрос', 'вопроса', 'вопросов') +
+            ' — на поле из ' + c.count + ' плиток остальные ' + (c.count - avail) + ' станут бонусами. Чтобы все плитки были вопросами, выберите несколько тем или «Все темы».</p>' :
+            (!isK && !c.powerOn && avail < 24 ? '<p class="set-note">Поле из 24 плиток без бонусов: нужно хотя бы 24 вопроса, а в выбранных темах ' + avail + '.</p>' : ''))) +
           row('Таймер', seg('timer', timers.map(function (n) { return { v: n, t: n ? n + ' с' : 'Нет' }; }), c.timer))) +
         row('Фон', '<div class="themes" role="radiogroup">' + themes + '</div>') +
         (isK || isB ? '' : row('Бонусы', '<label class="switch"><input type="checkbox" id="powerOn"' + (c.powerOn ? ' checked' : '') + '><span class="sw" aria-hidden="true"></span><span class="sr-only">Бонусы</span></label>') +

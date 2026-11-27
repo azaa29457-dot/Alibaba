@@ -163,6 +163,10 @@
     var p = cfg.powerups, k = 0;
     var powersOn = !!(p && p.on && p.ids && p.ids.length);
     if (powersOn) k = Math.max(1, Math.round(cfg.count * (E.FREQ[p.freq] || E.FREQ.mid)));
+    // Вопросов в выбранных темах меньше, чем свободных плиток (тема из 16 вопросов и поле из 24):
+    // недостающие плитки становятся бонусами, чтобы плиток было ровно столько, сколько выбрано
+    var avail = E.availableCount(cfg.topicKeys);
+    if (powersOn && avail > 0 && avail < cfg.count - k) k = cfg.count - avail;
     var qs = E.pickQuestions(cfg.topicKeys, Math.max(1, cfg.count - k));
     var tiles = qs.map(function (x) {
       var order = shuffle([0, 1, 2, 3]);
