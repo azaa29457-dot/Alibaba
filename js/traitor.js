@@ -22,7 +22,6 @@
   T.ADD_MS = 30000;
   T.CLUE_AT = 3;            // 3 верных ответа за день — улика
   T.WIN_BONUS = 300;        // каждому из победившей стороны
-  T.SUBJECT = 'biology7';   // пока режим только для биологии
 
   T.ROLES = {
     traitor: { id: 'traitor', name: 'Предатель', many: 'Предатели', img: 'traitor', bad: true,
