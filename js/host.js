@@ -7,7 +7,9 @@
   var ANS_COLORS = ['#6A4DFF', '#008F7A', '#E06A00', '#E0337F'];
 
   var s = null;          // состояние игры (движок)
-  function G() { return s && s.kind === 'kahoot' ? FB.Kahoot : E; }
+  function G() { return s && s.kind === 'kahoot' ? FB.Kahoot : (s && s.kind === 'blooket' ? FB.Blooket : E); }
+  function isNetMode(m) { return m === 'phones' || m === 'kahoot' || m === 'blooket'; }
+  var dirty = false, lastPub = 0; // Blooket: общая часть рассылается не чаще раза в 0,8 с
   var net = null;        // сеть (только режим с телефонами)
   var netStatus = null;
   var timers = [];
@@ -21,7 +23,16 @@
     var g = UI.store.get('alibaba.host', null);
     if (!g || !g.s || g.s.phase === 'end') return null;
     if (Date.now() - (g.t || 0) > 12 * 3600 * 1000) return null;
-    if (g.s.kind === 'kahoot') return g.s.qs ? { title: g.s.cfg.title, left: FB.Kahoot.left(g.s) } : null;
+    if (g.s.kind === 'kahoot') {
+      if (!g.s.qs) return null;
+      var kl = FB.Kahoot.left(g.s);
+      return { title: g.s.cfg.title, left: kl, text: 'осталось ' + kl + ' ' + UI.plural(kl, 'вопрос', 'вопроса', 'вопросов') };
+    }
+    if (g.s.kind === 'blooket') {
+      if (!g.s.pool) return null;
+      var bm = g.s.phase === 'play' ? Math.max(1, Math.ceil((g.s.ends - (g.t || 0)) / 60000)) : 0;
+      return { title: g.s.cfg.title, left: bm, text: bm ? 'осталось около ' + bm + ' мин' : 'игра ещё не началась' };
+    }
     return g.s.tiles ? { title: g.s.cfg.title, left: E.leftTiles(g.s) } : null;
   };
   H.clearSave = function () { UI.store.del('alibaba.host'); };
@@ -31,8 +42,9 @@
   H.create = function (cfg) {
     if (UI.isPhone()) { UI.home(); return; }
     H.stop();
-    if (cfg.mode === 'phones' || cfg.mode === 'kahoot') cfg.code = FB.Net.makeCode();
-    s = cfg.mode === 'kahoot' ? FB.Kahoot.create(cfg, Date.now()) : E.createGame(cfg, Date.now());
+    if (isNetMode(cfg.mode)) cfg.code = FB.Net.makeCode();
+    s = cfg.mode === 'kahoot' ? FB.Kahoot.create(cfg, Date.now()) :
+      (cfg.mode === 'blooket' ? FB.Blooket.create(cfg, Date.now()) : E.createGame(cfg, Date.now()));
     save();
     begin(false);
   };
@@ -44,6 +56,11 @@
     s = g.s;
     Object.keys(s.players || {}).forEach(function (k) { s.players[k].online = false; });
     if (s.kind === 'kahoot') { if (s.phase === 'q' || s.phase === 'get') { s.phase = 'get'; s.until = Date.now() + FB.Kahoot.GET_READY; s.cur.ans = {}; } }
+    else if (s.kind === 'blooket') {
+      // пока организатор был не на странице, время игры стояло
+      if (s.phase === 'play') s.ends = Date.now() + Math.max(30000, s.ends - (g.t || Date.now()));
+      s.frenzy = 0;
+    }
     else if (s.cur && s.cur.deadline) s.cur.deadline = Date.now() + s.cfg.timer * 1000; // время на вопрос заново
     s.v++;
     save();
@@ -68,10 +85,14 @@
     UI.applyTheme(s.cfg.theme);
     FX._wantAwake = true;
     FX.keepAwake();
-    if (s.mode === 'phones' || s.mode === 'kahoot') startNet(resumed);
+    if (isNetMode(s.mode)) startNet(resumed);
     timers.push(setInterval(tick, 200));
     timers.push(setInterval(presence, 3000));
-    timers.push(setInterval(function () { broadcast(); }, 5000));
+    timers.push(setInterval(function () {
+      broadcast();
+      // Blooket: раз в 5 с каждый телефон ещё раз получает свою часть (вдруг сообщение потерялось)
+      if (s && s.kind === 'blooket') sendMe(Object.keys(s.players).filter(function (k) { return s.players[k].online; }));
+    }, 5000));
     document.addEventListener('keydown', onKey);
     root.onbeforeunload = function (e) {
       if (s && s.phase !== 'end') { e.preventDefault(); e.returnValue = ''; return ''; }
@@ -102,6 +123,18 @@
   H.act = function (a) {
     if (!s) return false;
     var r = G().act(s, a, Date.now());
+    if (s.kind === 'blooket') {
+      var to = (r.touched || []).slice();
+      if (!r.ok && a.fromPhone && a.pid) to.push(a.pid); // ход не принят — телефон получит, что на самом деле
+      if (r.ok) {
+        dirty = true;
+        if (['start', 'end', 'restart', 'join', 'kick', 'tick', 'addtime'].indexOf(a.type) >= 0) flush();
+        render();
+        fxEvents(r.events);
+      }
+      sendMe(to);
+      return r.ok;
+    }
     if (r.ok) {
       save();
       broadcast();
@@ -128,12 +161,25 @@
   function broadcast() {
     if (net && s) net.broadcast({ t: 'state', s: G().view(s) });
   }
+  function flush() { dirty = false; lastPub = Date.now(); save(); broadcast(); }
+  function sendMe(pids) {
+    if (!net || !s || s.kind !== 'blooket') return;
+    var seen = {};
+    pids.forEach(function (pid) {
+      if (seen[pid] || !s.players[pid]) return;
+      seen[pid] = 1;
+      net.sendTo(pid, { t: 'me', s: FB.Blooket.me(s, pid) });
+    });
+  }
+  var BK_MOVES = ['answer', 'next', 'pick', 'target', 'guess', 'setpass', 'cast'];
 
   function onMsg(pid, m, via) {
     if (!s) return;
     var p = s.players[pid];
     if (m.t === 'hello') {
-      net.reply(via, pid, { t: 'welcome', s: G().view(s) });
+      var hi = { t: 'welcome', s: G().view(s) };
+      if (s.kind === 'blooket') hi.me = FB.Blooket.me(s, pid);
+      net.reply(via, pid, hi);
       if (p) touch(pid);
       return;
     }
@@ -149,7 +195,13 @@
       case 'answer': H.act({ type: 'answer', pid: pid, opt: Number(m.opt) }); break;
       case 'target': if (p) H.act({ type: 'target', target: Number(m.target), team: p.team }); break;
       case 'bye': H.act({ type: 'online', pid: pid, on: false }); break;
-      case 'sync': net.sendTo(pid, { t: 'state', s: G().view(s) }); break;
+      case 'sync': net.sendTo(pid, { t: 'state', s: G().view(s) }); sendMe([pid]); break;
+      case 'bk':
+        if (s.kind === 'blooket' && p && BK_MOVES.indexOf(m.a) >= 0) {
+          H.act({ type: m.a, pid: pid, step: m.step == null ? null : Number(m.step), opt: Number(m.opt), i: Number(m.i),
+            target: String(m.target || ''), word: String(m.word || ''), fromPhone: true });
+        }
+        break;
     }
   }
   function touch(pid) {
@@ -159,7 +211,7 @@
     if (!p.online) H.act({ type: 'online', pid: pid, on: true });
   }
   function presence() {
-    if (!s || (s.mode !== 'phones' && s.mode !== 'kahoot')) return;
+    if (!s || !isNetMode(s.mode)) return;
     var now = Date.now();
     Object.keys(s.players).forEach(function (k) {
       var p = s.players[k];
@@ -167,6 +219,16 @@
     });
   }
   function tick() {
+    if (s && s.kind === 'blooket') {
+      var nowB = Date.now();
+      if (s.phase === 'play') {
+        if (nowB >= s.ends) { H.act({ type: 'tick' }); return; }
+        var sb = Math.ceil((s.ends - nowB) / 1000);
+        if (sb <= 10 && sb !== lastTickSec) { lastTickSec = sb; FX.play('tick'); }
+      }
+      if (dirty && nowB - lastPub > 800) flush();
+      return;
+    }
     if (s && s.kind === 'kahoot') {
       if (s.phase === 'get' && Date.now() >= s.until) { H.act({ type: 'tick' }); return; }
       if ((s.phase === 'res' || s.phase === 'board') && s.until && Date.now() >= s.until) { H.act({ type: 'tick' }); return; }
@@ -187,6 +249,7 @@
   function frame() {
     raf = requestAnimationFrame(frame);
     if (s && s.kind === 'kahoot') { kFrame(); return; }
+    if (s && s.kind === 'blooket') { bFrame(); return; }
     var fill = document.querySelector('.ov-q .ruler-fill');
     if (!fill || !s || !s.cur) return;
     var secEl = document.querySelector('.ov-q .ruler-sec');
@@ -230,6 +293,11 @@
         case 'kanswer': FX.play('vote'); break;
         case 'kres': FX.play('bonus'); break;
         case 'kget': FX.play('join'); break;
+        case 'bstart': FX.play('open'); break;
+        case 'bsteal': case 'bswap': FX.play('bad'); break;
+        case 'bbig': FX.play('good'); FX.confetti({ count: 60, x: innerWidth * 0.8, y: innerHeight * 0.4, power: 8 }); break;
+        case 'bfrenzy': FX.play('bonus'); FX.confetti({ count: 120, rain: true }); break;
+        case 'bfail': FX.play('neutral'); break;
       }
     });
   }
@@ -269,6 +337,7 @@
   function render(force) {
     if (!s) return;
     if (s.kind === 'kahoot') { renderK(force); return; }
+    if (s.kind === 'blooket') { renderB(force); return; }
     var v = E.view(s);
     var want = v.phase === 'lobby' ? 'lobby' : (v.phase === 'end' ? 'end' : 'game');
     if (force || built !== want) {
@@ -312,6 +381,7 @@
     m.setAttribute('role', 'menu');
     var items = [];
     if (s.kind === 'kahoot' && s.phase === 'q') items.push(['close', 'Завершить вопрос']);
+    if (s.kind === 'blooket' && s.phase === 'play') items.push(['addtime', 'Добавить 1 минуту']);
     if (s.kind !== 'kahoot' && s.phase === 'board') items.push(['skip', 'Передать ход следующей команде']);
     if (s.phase !== 'end' && s.phase !== 'lobby') items.push(['end', 'Завершить игру и показать итоги']);
     items.push(['home', 'Выйти на главную']);
@@ -331,6 +401,7 @@
       close();
       if (k === 'skip') H.act({ type: 'skip' });
       else if (k === 'close') H.act({ type: 'close' });
+      else if (k === 'addtime') H.act({ type: 'addtime' });
       else if (k === 'end') UI.confirm('Завершить игру сейчас и показать итоги?', 'Завершить').then(function (ok) { if (ok) H.act({ type: 'end' }); });
       else if (k === 'home') {
         var msg = s.phase === 'end' ? 'Выйти на главную?' : 'Выйти на главную? Игру можно будет продолжить с главной страницы.';
@@ -449,7 +520,7 @@
       '<button class="bz-btn" data-act="menu" type="button" aria-label="Меню" title="Меню">✕</button>' +
       '<button class="bz-btn" data-act="sound" type="button" aria-label="' + (FX.isMuted() ? 'Включить звук' : 'Выключить звук') + '" title="Звук (M)">' + soundIcon() + '</button>' +
       '<button class="bz-btn" data-act="full" type="button" aria-label="Во весь экран" title="Во весь экран (F)">⛶</button>' +
-      (v.mode === 'phones' || v.mode === 'kahoot' ? '<button class="bz-btn" data-act="code" type="button" aria-label="Код для входа" title="Код для входа">#</button>' : '') +
+      (isNetMode(v.mode) ? '<button class="bz-btn" data-act="code" type="button" aria-label="Код для входа" title="Код для входа">#</button>' : '') +
     '</div>';
   }
   function buildGame(v) {
@@ -715,7 +786,8 @@
         '</header>' +
         '<div class="kh-bar">' +
           '<div class="kh-count"><b id="kCount">0</b><span id="kCountL">игроков</span></div>' +
-          '<div class="kh-name">' + UI.wordmark('wordmark-sm') + '<span>' + esc(v.title) + '</span></div>' +
+          '<div class="kh-name">' + UI.wordmark('wordmark-sm') + '<span>' + esc(v.title) + '</span>' +
+            (v.kind === 'blooket' ? '<span class="bk-gname"><img src="img/bk/' + FB.Blooket.GAMES[v.game].img + '.webp" alt="">' + esc(FB.Blooket.GAMES[v.game].name) + '</span>' : '') + '</div>' +
           '<button class="btn kh-start" type="button" id="kStart">Старт</button>' +
         '</div>' +
         '<div class="kh-players" id="kPlayers"></div>' +
@@ -852,17 +924,18 @@
     var pod = [P[1], P[0], P[2]].map(function (p, k) {
       if (!p) return '<div class="kp empty"></div>';
       var place = [2, 1, 3][k];
-      return '<div class="kp kp' + place + '">' + UI.avImg(p.av, 'av kp-av') + '<span class="kp-name">' + esc(p.name) + '</span><span class="kp-score">' + p.score + '</span>' +
+      return '<div class="kp kp' + place + '">' + UI.avImg(p.av, 'av kp-av') + '<span class="kp-name">' + esc(p.name) + '</span><span class="kp-score">' + scoreTxt(p.score) + '</span>' +
         '<div class="kp-bar"><img src="img/ui/medal' + place + '.webp" alt="' + place + ' место"></div></div>';
     }).join('');
     UI.screen('k-end',
       '<div class="kh kh-end">' + tools(v) +
         '<h1 class="kh-end-title">' + (P[0] ? 'Победитель: ' + esc(P[0].name) + '!' : 'Игра окончена') + '</h1>' +
         '<div class="kh-end-row">' +
-          '<div class="kh-podium">' + pod + '</div>' +
+          '<div class="kh-end-left"><div class="kh-podium">' + pod + '</div>' +
+            (P.length > 3 ? '<ol class="kh-rest" start="4">' + P.slice(3, 13).map(function (p) { return '<li>' + UI.avImg(p.av) + '<span>' + esc(p.name) + '</span><b>' + scoreTxt(p.score) + '</b></li>'; }).join('') + '</ol>' : '') +
+          '</div>' +
           '<div class="win-video" id="winVideo"></div>' +
         '</div>' +
-        (P.length > 3 ? '<ol class="kh-rest" start="4">' + P.slice(3, 15).map(function (p) { return '<li>' + UI.avImg(p.av) + '<span>' + esc(p.name) + '</span><b>' + p.score + '</b></li>'; }).join('') + '</ol>' : '') +
         '<div class="win-actions">' +
           '<button class="btn bz-primary btn-lg" type="button" id="againBtn">Играть ещё раз</button>' +
           '<button class="btn bz-secondary" type="button" id="newBtn">Новая игра</button>' +
@@ -874,5 +947,80 @@
     UI.$('#againBtn').addEventListener('click', function () { H.act({ type: 'restart' }); });
     UI.$('#newBtn').addEventListener('click', function () { H.clearSave(); closePlayers(); s = null; H.stop(); UI.setup(); });
     UI.$('#homeBtn').addEventListener('click', function () { H.clearSave(); closePlayers(); s = null; H.stop(); UI.home(); });
+  }
+
+  /* ================= Режим Blooket: каждый в своём темпе, на экране — таблица лидеров и лента событий ================= */
+  function scoreTxt(n) { return s && s.kind === 'blooket' ? FB.Blooket.fmt(s.game, n) : String(n); }
+  function unitImg(game) { return '<img class="bk-unit u-' + game + '" src="img/bk/' + (game === 'fish' ? 'fish1' : 'gold') + '.webp" alt="">'; }
+  function fmtClock(ms) { var t = Math.ceil(Math.max(0, ms || 0) / 1000); return Math.floor(t / 60) + ':' + ('0' + t % 60).slice(-2); }
+  function renderB(force) {
+    var v = FB.Blooket.view(s);
+    var want = v.phase === 'lobby' ? 'k-lobby' : (v.phase === 'end' ? 'k-end' : 'b-game');
+    if (force || built !== want) {
+      built = want;
+      if (want === 'k-lobby') buildKLobby(v);
+      else if (want === 'k-end') buildKEnd(v);
+      else buildBGame(v);
+    }
+    if (want === 'k-lobby') updateKLobby(v);
+    else if (want === 'b-game') updateBGame(v);
+  }
+  function buildBGame(v) {
+    var g = FB.Blooket.GAMES[v.game];
+    var url = UI.joinUrl(v.code), host = url.replace(/^https?:\/\//, '').replace(/\?.*$/, '');
+    UI.screen('b-game',
+      '<div class="kh bk bk-game" data-game="' + v.game + '">' + tools(v) +
+        '<header class="bk-top">' +
+          '<div class="bk-title"><img src="img/bk/' + g.img + '.webp" alt=""><span><b>' + esc(g.name) + '</b><small>' + esc(v.title) + '</small></span></div>' +
+          '<div class="bk-clock" id="bClock" role="timer" aria-label="Осталось времени"><img src="img/bk/timer.webp" alt=""><span id="bTimer">' + fmtClock(v.left) + '</span></div>' +
+          '<div class="bk-join"><span>Можно зайти и сейчас</span><b>' + esc(host) + '</b><span>PIN <b>' + esc(UI.fmtCode(v.code)) + '</b></span></div>' +
+        '</header>' +
+        '<div class="bk-frenzy" id="bFrenzy" hidden><img src="img/bk/frenzy.webp" alt=""><span><b>Клёв!</b> Все ловят вдвое больше ещё <span id="bFz"></span> с</span></div>' +
+        '<main class="bk-main">' +
+          '<section class="bk-board" aria-label="Таблица лидеров"><ol id="bBoard"></ol></section>' +
+          '<aside class="bk-feed" aria-label="Что происходит"><h2>Что происходит</h2><ol id="bFeed" aria-live="polite"></ol></aside>' +
+        '</main>' +
+        '<footer class="bk-ctl"><button class="btn kh-next" type="button" data-b="addtime">+1 минута</button><button class="btn kh-skip" type="button" data-b="end">Завершить игру</button></footer>' +
+      '</div>');
+    bindTop(UI.$('.bk .bz-tools'));
+    UI.$('.bk-ctl').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-b]');
+      if (!b) return;
+      if (b.getAttribute('data-b') === 'end') UI.confirm('Завершить игру сейчас и показать итоги?', 'Завершить').then(function (ok) { if (ok) H.act({ type: 'end' }); });
+      else H.act({ type: 'addtime' });
+    });
+  }
+  function updateBGame(v) {
+    var max = v.players.length ? Math.max(1, v.players[0].score) : 1;
+    UI.patch(UI.$('#bBoard'), v.players.length ? v.players.slice(0, 12).map(function (p, i) {
+      return '<li class="' + (p.on ? '' : 'off') + '" style="--w:' + (p.score / max).toFixed(3) + '">' +
+        '<span class="bk-pl">' + p.place + '</span>' + UI.avImg(p.av) + '<span class="bk-n">' + esc(p.name) + '</span>' +
+        '<b class="bk-sc">' + unitImg(v.game) + '<span>' + esc(scoreTxt(p.score)) + '</span></b></li>';
+    }).join('') + (v.players.length > 12 ? '<li class="bk-more">и ещё ' + (v.players.length - 12) + '</li>' : '') : '<li class="bk-more">Никого нет</li>');
+    UI.patch(UI.$('#bFeed'), v.feed.length ? v.feed.slice().reverse().map(function (f) {
+      return '<li class="bf-' + f.k + '">' + UI.avImg(f.a.av) + '<b>' + esc(f.a.name) + '</b>' +
+        '<img class="bf-ico" src="img/bk/' + esc(f.img) + '.webp" alt="">' +
+        (f.b ? UI.avImg(f.b.av) + '<b>' + esc(f.b.name) + '</b>' : '') +
+        '<span>' + esc(f.txt) + '</span></li>';
+    }).join('') : '<li class="bk-quiet">' + ({ gold: 'Здесь появятся кражи, обмены и крупные выигрыши', hack: 'Здесь появятся взломы и крупная добыча', fish: 'Здесь появятся редкие уловы и клёв' })[v.game] + '</li>');
+  }
+  function bFrame() {
+    if (!s || s.phase !== 'play') return;
+    var now = Date.now(), el = document.getElementById('bTimer');
+    if (el) {
+      var t = fmtClock(s.ends - now);
+      if (el.textContent !== t) el.textContent = t;
+      var c = document.getElementById('bClock');
+      if (c) c.classList.toggle('low', s.ends - now <= 10000);
+    }
+    var fz = document.getElementById('bFrenzy');
+    if (fz) {
+      var on = !!(s.frenzy && now < s.frenzy);
+      if (fz.hidden === on) fz.hidden = !on;
+      if (on) {
+        var sec = String(Math.ceil((s.frenzy - now) / 1000)), fe = document.getElementById('bFz');
+        if (fe && fe.textContent !== sec) fe.textContent = sec;
+      }
+    }
   }
 })(window);

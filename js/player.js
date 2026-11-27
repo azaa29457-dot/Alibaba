@@ -10,6 +10,8 @@
   var status = 'connecting', joinedSent = 0, myVote = null, picking = null;
   var shellBuilt = false, bodyKey = null, raf = 0, recvAt = 0, lastFxKey = null, changingTeam = false, kSent = null;
   var KCOL = ['#E21B3C', '#1368CE', '#D89E00', '#26890C'], SHAPES = ['▲', '◆', '●', '■'];
+  // Blooket: mine — личная часть (свой вопрос, свой ход), view — общая (таймер, лидеры)
+  var mine = null, meAt = 0, bkPend = null, lastAlert = null, castT = null, lastStKey = null;
 
   P.savedSession = function () {
     var x = UI.store.get('alibaba.player', null);
@@ -21,6 +23,7 @@
     UI.store.set('alibaba.player', { code: code, pid: pid, name: prof.name, av: prof.av, t: Date.now() });
   }
   P.active = function () { return !!net; };
+  P.debugState = function () { return { pid: pid, mine: mine, view: view, pend: bkPend, status: status }; }; // для тестов
 
   P.start = function (c) {
     P.stop(true);
@@ -33,6 +36,7 @@
       av: same && sess.av ? sess.av : E.AVATARS[Math.floor(Math.random() * E.AVATARS.length)]
     };
     view = null; status = 'connecting'; joinedSent = 0; myVote = null; picking = null;
+    mine = null; bkPend = null; lastAlert = null; lastStKey = null; clearTimeout(castT);
     shellBuilt = false; bodyKey = null; changingTeam = false;
     try { history.replaceState(null, '', location.pathname + '?code=' + code); } catch (e) { }
     simple('connecting', '<div class="spinner" aria-hidden="true"></div><h2>Ищем игру ' + esc(UI.fmtCode(code)) + '…</h2><p class="muted">Это занимает пару секунд.</p>');
@@ -95,10 +99,12 @@
   }
 
   function onMsg(m) {
+    if (m.t === 'me') { if (takeMe(m.s) && view) render(); return; }
     if (m.t === 'welcome' || m.t === 'state') {
       var s = m.s;
-      if (!s || (!s.teams && s.kind !== 'kahoot')) return;
-      if (view && s.id === view.id && s.v < view.v) return;
+      if (!s || (!s.teams && s.kind !== 'kahoot' && s.kind !== 'blooket')) return;
+      if (m.me !== undefined) takeMe(m.me);
+      if (view && s.id === view.id && s.v < view.v) { if (m.me) render(); return; }
       view = s; recvAt = Date.now();
       if (s.cfg && s.cfg.theme) UI.applyTheme(s.cfg.theme);
       render();
@@ -117,6 +123,13 @@
     }
   }
 
+  function takeMe(x) {
+    if (!x || x.id !== pid) return false;
+    if (mine && x.pv < mine.pv) return false;
+    if (bkPend && x.step !== bkPend.step) bkPend = null;
+    mine = x; meAt = Date.now();
+    return true;
+  }
   function me() {
     if (!view) return null;
     for (var i = 0; i < view.players.length; i++) if (view.players[i].id === pid) return view.players[i];
@@ -127,6 +140,7 @@
   function render() {
     if (!view) return;
     if (view.kind === 'kahoot') { renderK(); return; }
+    if (view.kind === 'blooket') { renderB(); return; }
     var my = me();
     if (!my) {
       if (joinedSent && Date.now() - joinedSent < 5000) return; // ждём подтверждения
@@ -166,7 +180,7 @@
     var started = view.phase !== 'lobby';
     var existing = UI.$('.ph-profile');
     if (E.AVATARS.indexOf(prof.av) < 0) prof.av = E.AVATARS[Math.floor(Math.random() * E.AVATARS.length)];
-    var isK = view.kind === 'kahoot';
+    var isK = view.kind === 'kahoot' || view.kind === 'blooket';
     var teamsHtml = isK ? '<button type="button" class="btn btn-yellow btn-lg k-join" data-team="0">Войти в игру</button>' : view.teams.map(function (t, i) {
       return '<button type="button" class="ph-team-btn" data-team="' + i + '" style="--tc:' + t.color + '">' +
         '<span class="dot"></span><b>' + esc(t.name) + '</b><span class="n">' + t.players + '</span></button>';
@@ -175,7 +189,8 @@
     UI.screen('player',
       '<div class="ph ph-profile"><div class="ph-simple-in">' + UI.wordmark('wordmark-sm') +
         '<p class="ph-game">Игра <b>' + esc(UI.fmtCode(code)) + '</b>: ' + esc(view.title) + '</p>' +
-        (started ? '<p class="ph-note">Игра уже идёт — можно присоединиться к команде.</p>' : '') +
+        (started ? '<p class="ph-note">' + (isK ? 'Игра уже идёт — можно присоединиться.' : 'Игра уже идёт — можно присоединиться к команде.') + '</p>' : '') +
+        (view.kind === 'blooket' ? '<p class="ph-note bk-pgame"><img src="img/bk/' + FB.Blooket.GAMES[view.game].img + '.webp" alt=""><span><b>' + esc(FB.Blooket.GAMES[view.game].name) + '</b>' + esc(FB.Blooket.GAMES[view.game].about) + '</span></p>' : '') +
         '<label class="lbl" for="nameInput">Твой ник</label>' +
         '<div class="name-row"><span class="av-cur" id="avCur">' + UI.avImg(prof.av) + '</span>' +
         '<input id="nameInput" maxlength="20" autocomplete="nickname" placeholder="Придумай ник" value="' + esc(prof.name) + '"></div>' +
@@ -237,6 +252,7 @@
     raf = requestAnimationFrame(timerFrame);
     var el = UI.$('#phTimer');
     if (!el) return;
+    if (view && view.kind === 'blooket') { bTimer(el); return; }
     var c = view && (view.kind === 'kahoot' ? view.q : view.cur);
     var on = view && (view.phase === 'question' || (view.kind === 'kahoot' && view.phase === 'q')) && c && c.remain != null && c.total;
     el.hidden = !on;
@@ -347,6 +363,7 @@
 
   function onMainClick(e) {
     var t;
+    if (view && view.kind === 'blooket') { onBClick(e); return; }
     if ((t = e.target.closest('[data-tile]')) && view.phase === 'board' && picking == null) {
       picking = Number(t.getAttribute('data-tile'));
       net.send({ t: 'pick', tile: picking });
@@ -477,6 +494,253 @@
       else { FX.play('wrong'); FX.vibrate(200); }
     } else if (key[0] === 'e' && my.place === 1) { FX.play('win'); FX.confetti({ count: 150, rain: true }); }
     else if (key[0] === 'q') FX.vibrate(40);
+  }
+  /* ================= Режим Blooket ================= */
+  var BCOL = { gold: '#FFC83D', hack: '#2BE27A', fish: '#38B6FF' };
+  var castStep = null;
+  function bImg(name, cls) { return '<img class="' + (cls || 'bk-img') + '" src="img/bk/' + name + '.webp" alt="" draggable="false">'; }
+  function bUnit() { return view.game === 'hack' ? 'крипты' : (view.game === 'fish' ? 'кг' : 'золота'); }
+  function chestSvg(i) {
+    var id = 'chc' + i;
+    return '<svg viewBox="0 0 120 100" aria-hidden="true"><defs><clipPath id="' + id + '"><path d="M8 94V34Q8 8 60 8Q112 8 112 34V94Z"/></clipPath></defs>' +
+      '<g clip-path="url(#' + id + ')"><rect x="0" y="0" width="120" height="100" fill="#A9611F"/><path d="M8 46V34Q8 8 60 8Q112 8 112 34V46Z" fill="#C4782F"/>' +
+      '<rect x="0" y="44" width="120" height="7" fill="#7A4317"/><rect x="22" y="0" width="12" height="100" fill="#F2B632"/><rect x="86" y="0" width="12" height="100" fill="#F2B632"/>' +
+      '<rect x="0" y="88" width="120" height="6" fill="#7A4317"/></g>' +
+      '<rect x="47" y="36" width="26" height="28" rx="6" fill="#FFD23F" stroke="#B88600" stroke-width="3"/><circle cx="60" cy="47" r="4" fill="#7A4317"/><rect x="58" y="49" width="4" height="8" fill="#7A4317"/></svg>';
+  }
+  function serverSvg() {
+    return '<svg viewBox="0 0 120 100" aria-hidden="true"><rect x="14" y="6" width="92" height="88" rx="10" fill="#14213D"/><rect x="22" y="14" width="76" height="22" rx="4" fill="#0B1427"/>' +
+      '<rect x="22" y="42" width="76" height="22" rx="4" fill="#0B1427"/><rect x="22" y="70" width="76" height="16" rx="4" fill="#0B1427"/>' +
+      '<circle cx="32" cy="25" r="4" fill="#2BE27A"/><circle cx="32" cy="53" r="4" fill="#2BE27A"/><circle cx="32" cy="78" r="3.5" fill="#FFC83D"/>' +
+      '<text x="68" y="62" text-anchor="middle" font-family="Unbounded, sans-serif" font-weight="900" font-size="44" fill="#2BE27A">?</text></svg>';
+  }
+  function renderB() {
+    if (!mine) {
+      if (joinedSent && Date.now() - joinedSent < 5000) return;
+      profileScreen();
+      return;
+    }
+    prof.name = mine.name; prof.av = mine.av; prof.team = 0;
+    saveSession();
+    buildShell();
+    var shell = UI.$('.ph-game-shell');
+    shell.style.setProperty('--tc', BCOL[view.game]);
+    shell.setAttribute('data-game', view.game);
+    UI.patch(UI.$('#phTeam'), UI.avImg(mine.av, 'av ph-av') + '<span><b>' + esc(mine.name) + '</b><small>' + (view.phase === 'lobby' || mine.st === 'wait' ? 'в игре' : mine.place + '-е место из ' + mine.of) + '</small></span>');
+    var sc = UI.$('#phScore');
+    sc.classList.add('bk-score');
+    FX.countTo(sc, mine.score);
+    var key = 'b:' + view.phase + ':' + mine.st + ':' + mine.step;
+    var main = UI.$('#phMain');
+    if (key !== bodyKey) { bodyKey = key; main.className = 'ph-main bk-ph b-' + mine.st; main.innerHTML = ''; main._html = null; }
+    shell.classList.toggle('k-bad', view.phase === 'play' && mine.st === 'wrong');
+    shell.classList.remove('k-good');
+    UI.patch(main, bBody());
+    var wv = UI.$('#phWinVideo');
+    if (wv && !wv.firstChild) UI.winVideo(wv);
+    bFx();
+  }
+  function nextBtn(dis) { return '<button type="button" class="btn btn-yellow btn-lg bk-next" data-bnext="1"' + dis + '>Дальше</button>'; }
+  function frenzyOn() { return view.frenzy && view.frenzy - (Date.now() - recvAt) > 0; }
+  function bBody() {
+    var G = FB.Blooket.GAMES[view.game], st = mine.st;
+    var dis = bkPend && bkPend.step === mine.step ? ' disabled' : '';
+    if (view.phase === 'end') {
+      var pl = mine.place, top3 = pl <= 3;
+      return '<div class="ph-end">' + (pl === 1 ? '<div class="ph-win"><img class="ph-trophy" src="img/ui/trophy.webp" alt=""><div class="win-video ph-win-video" id="phWinVideo"></div></div>' :
+        '<div class="ph-win"><img class="ph-trophy" src="img/ui/' + (top3 ? 'medal' + pl : 'clap') + '.webp" alt=""></div>') +
+        '<h2 class="ph-h">' + (pl === 1 ? 'Первое место!' : 'Ты на ' + pl + '-м месте') + '</h2>' +
+        '<p class="k-pts center">' + mine.score + ' ' + bUnit() + '</p>' +
+        '<p class="muted center">Верных ответов: ' + mine.right + ' из ' + (mine.right + mine.wrong) + '</p>' +
+        '<p class="muted center">Организатор может начать новую игру — не закрывай страницу.</p>' +
+        '<button type="button" class="btn btn-ghost" data-leave="1">Выйти</button></div>';
+    }
+    if (view.phase === 'lobby' || st === 'wait') {
+      return '<div class="ph-wait"><div class="ph-big-av">' + UI.avImg(mine.av, 'big-av') + '</div><h2 class="ph-h">Ты в игре!</h2>' +
+        '<div class="bk-rules">' + bImg(G.img) + '<p><b>' + esc(G.name) + '</b>' + esc(G.about) + '</p></div>' +
+        '<p class="muted">Найди свой ник на большом экране. Игра скоро начнётся.</p></div>';
+    }
+    var top = repassHtml();
+    switch (st) {
+      case 'pass':
+        return '<div class="bk-center">' + bImg('lock', 'bk-hero') + '<h2 class="ph-h">Выбери пароль</h2>' +
+          '<p class="muted center">Соперники будут угадывать его, чтобы украсть твою крипту. Никому не показывай!</p>' +
+          '<div class="bk-opts">' + mine.passOpts.map(function (w) {
+            return '<button type="button" class="bk-opt" data-bpass="' + esc(w) + '"' + dis + '>' + bImg('key', 'bk-oi') + '<span>' + esc(w) + '</span></button>';
+          }).join('') + '</div></div>';
+      case 'q':
+        return top + (view.game === 'hack' && mine.pass ? '<p class="bk-mypass">' + bImg('key', 'bk-oi') + 'Твой пароль: <b>' + esc(mine.pass) + '</b></p>' : '') +
+          '<p class="bk-topic">' + esc(mine.q.topic) + '</p><h2 class="ph-q k-q">' + esc(mine.q.text) + '</h2><div class="k-grid">' + mine.q.opts.map(function (o, i) {
+            return '<button type="button" class="k-btn" data-bopt="' + i + '" style="--kc:' + KCOL[i] + '"' + dis + '><span class="kh-shape">' + SHAPES[i] + '</span><span>' + esc(o) + '</span></button>';
+          }).join('') + '</div>';
+      case 'wrong':
+        return '<div class="k-res"><div class="k-res-ico">✗</div><h2>Неверно</h2><p class="k-right">Правильно: ' + esc(mine.q.opts[mine.q.correct]) + '</p></div>' + nextBtn(dis);
+      case 'chest':
+        return top + '<div class="bk-center"><div class="k-res-ico bk-ok">✓</div><h2 class="ph-h">' + (view.game === 'hack' ? 'Верно! Выбери сервер' : 'Верно! Выбери сундук') + '</h2></div>' +
+          '<div class="bk-chests">' + [0, 1, 2].map(function (i) {
+            return '<button type="button" class="bk-chest" data-bpick="' + i + '" style="--i:' + i + '"' + dis + ' aria-label="' + (view.game === 'hack' ? 'Сервер ' : 'Сундук ') + (i + 1) + '">' +
+              (view.game === 'hack' ? serverSvg() : chestSvg(i)) + '</button>';
+          }).join('') + '</div>';
+      case 'reveal': return top + revealHtml() + nextBtn(dis);
+      case 'target': {
+        var a = mine.ask || {};
+        var title = a.k === 'steal' ? 'У кого украсть ' + a.n + '%?' : (a.k === 'swap' ? 'С кем поменяться золотом?' : 'Кого взломать?');
+        return '<h2 class="ph-h bk-th">' + bImg(a.k === 'steal' ? 'ninja' : (a.k === 'swap' ? 'swap' : 'unlock'), 'bk-oi') + esc(title) + '</h2>' +
+          '<div class="bk-targets">' + (mine.targets || []).map(function (t) {
+            return '<button type="button" class="bk-target" data-btarget="' + esc(t.id) + '"' + dis + '>' + UI.avImg(t.av) + '<b>' + esc(t.name) + '</b><span>' + t.score + '</span></button>';
+          }).join('') + '</div>';
+      }
+      case 'guess': {
+        var g = mine.guess;
+        return '<div class="bk-center">' + bImg('coder', 'bk-hero') + '<h2 class="ph-h">Угадай пароль</h2>' +
+          '<p class="bk-who">' + (g.av ? UI.avImg(g.av) : '') + '<b>' + esc(g.name) + '</b></p><p class="muted center">Один из этих паролей — настоящий.</p>' +
+          '<div class="bk-opts">' + g.opts.map(function (w) {
+            return '<button type="button" class="bk-opt" data-bword="' + esc(w) + '"' + dis + '>' + bImg('key', 'bk-oi') + '<span>' + esc(w) + '</span></button>';
+          }).join('') + '</div></div>';
+      }
+      case 'cast': {
+        var fz = frenzyOn() ? '<p class="bk-fz">' + bImg('frenzy', 'bk-oi') + '<b>Клёв!</b> Сейчас улов ×2</p>' : '';
+        if (castStep === mine.step) return fz + '<div class="bk-cast waiting">' + bImg('rod', 'bk-hero swing') + '<div class="bk-water"><i class="bk-bob"></i></div><h2 class="ph-h">Ждём поклёвку…</h2></div>';
+        return fz + '<div class="bk-cast"><div class="k-res-ico bk-ok">✓</div><h2 class="ph-h">Верно!</h2>' + bImg('rod', 'bk-hero') +
+          '<button type="button" class="btn btn-yellow btn-lg bk-castbtn" data-bcast="1"' + dis + '>Закинуть удочку</button>' + lureHtml() + '</div>';
+      }
+      case 'catch': return catchHtml() + nextBtn(dis);
+    }
+    return '<p class="muted">Ждём…</p>';
+  }
+  function lureHtml() {
+    var L = mine.lure | 0, w = '';
+    for (var i = 0; i <= FB.Blooket.LURE_MAX; i++) w += '<i class="' + (i <= L ? 'on' : '') + '"></i>';
+    return '<p class="bk-lure"><span>Наживка: уровень ' + (L + 1) + ' из ' + (FB.Blooket.LURE_MAX + 1) + '</span><span class="bk-lv" aria-hidden="true">' + w + '</span></p>';
+  }
+  function repassHtml() {
+    if (view.game !== 'hack' || !mine.repass || mine.st === 'pass') return '';
+    return '<div class="bk-repass"><p>' + bImg('lock', 'bk-oi') + '<span><b>Тебя взломали!</b> Выбери новый пароль:</span></p><div class="bk-opts row">' + mine.repass.map(function (w) {
+      return '<button type="button" class="bk-opt sm" data-brepass="' + esc(w) + '">' + esc(w) + '</button>';
+    }).join('') + '</div></div>';
+  }
+  function revealHtml() {
+    var r = mine.res || {}, b = mine.box, out = '', unit = bUnit(), nm = r.who ? r.who.name : '';
+    if (b && r.k !== 'hackok' && r.k !== 'hackfail') {
+      out += '<div class="bk-open">' + b.items.map(function (it, i) {
+        return '<div class="bk-prize' + (i === b.pick ? ' on' : '') + '">' + bImg(it.img) + '<b>' + esc(it.t) + '</b><small>' + esc(it.s) + '</small></div>';
+      }).join('') + '</div>';
+    }
+    var head = '', sub = '', mood = r.delta > 0 ? 'good' : (r.delta < 0 ? 'bad' : '');
+    switch (r.k) {
+      case 'add': head = '+' + r.delta + ' ' + unit; break;
+      case 'pct': case 'mul':
+        if (r.delta > 0) head = '+' + r.delta + ' ' + unit;
+        else { head = 'Пока нечего умножать'; sub = 'Сначала заработай немного ' + unit; }
+        break;
+      case 'lose': head = r.delta < 0 ? '−' + (-r.delta) + ' ' + unit : 'Нечего терять!'; if (view.game === 'hack' && r.delta < 0) sub = 'Вирус съел часть крипты'; break;
+      case 'none': head = view.game === 'hack' ? 'Сбой системы' : 'Пусто'; sub = 'Повезёт в следующий раз'; break;
+      case 'steal':
+        if (r.delta > 0) { head = '+' + r.delta + ' ' + unit; sub = 'Ты крадёшь ' + r.n + '% у игрока ' + nm; mood = 'good'; }
+        else { head = 'Красть нечего'; sub = 'У игрока ' + nm + ' пока нет золота'; }
+        break;
+      case 'swap': head = 'Обмен с игроком ' + nm; sub = (r.delta >= 0 ? '+' : '−') + Math.abs(r.delta) + ' ' + unit; break;
+      case 'hackok': out += bImg('unlock', 'bk-hero'); head = 'Взлом удался!';
+        sub = r.delta > 0 ? '+' + r.delta + ' крипты у игрока ' + nm + ' (пароль «' + r.word + '»)' : 'Но у игрока ' + nm + ' пока нет крипты. Пароль — «' + r.word + '»';
+        mood = 'good'; break;
+      case 'hackfail': out += bImg('lock', 'bk-hero'); head = 'Пароль не подошёл'; sub = 'Игрок ' + nm + ' узнает о попытке взлома'; mood = 'bad'; break;
+      case 'alone': head = 'Соперников пока нет'; sub = 'Этот приз сработает, когда в игре будут другие игроки'; break;
+    }
+    return out + '<div class="bk-result ' + mood + '"><h2>' + esc(head) + '</h2>' + (sub ? '<p>' + esc(sub) + '</p>' : '') + '</div>';
+  }
+  function catchHtml() {
+    var r = mine.res || {}, f = FB.Blooket.FISH_BY[r.id] || FB.Blooket.FISH_BY.boot;
+    if (f.special === 'lure') return '<div class="bk-catch">' + bImg('worm', 'bk-fish') + '<h2>Наживка!</h2><p class="bk-csub">Теперь уровень ' + (r.lure + 1) + ' — крупная рыба клюёт чаще</p></div>';
+    if (f.special === 'frenzy') return '<div class="bk-catch">' + bImg('frenzy', 'bk-fish') + '<h2>Клёв!</h2><p class="bk-csub">20 секунд все ловят вдвое больше</p></div>';
+    return '<div class="bk-catch t' + f.tier + '"><span class="bk-ray" aria-hidden="true"></span>' + bImg(f.id, 'bk-fish') + '<p class="bk-tier">' + FB.Blooket.TIERS[f.tier] + '</p><h2>' + esc(f.name) + '</h2>' +
+      '<p class="k-pts">+' + (r.kg || 0) + ' кг' + (r.x2 ? ' <span class="bk-x2">×2</span>' : '') + '</p></div>';
+  }
+  function bk(a, extra, nostep) {
+    if (!net || !mine) return;
+    var msg = { t: 'bk', a: a };
+    Object.keys(extra || {}).forEach(function (k) { msg[k] = extra[k]; });
+    if (!nostep) { msg.step = mine.step; bkPend = { step: mine.step, msg: JSON.parse(JSON.stringify(msg)), t: Date.now(), tries: 1 }; }
+    net.send(msg);
+    FX.unlock(); FX.vibrate(15);
+    renderB();
+  }
+  function onBClick(e) {
+    var t = e.target.closest('button');
+    if (!t || t.disabled || !mine) return;
+    if (t.hasAttribute('data-leave')) { leave(); return; }
+    if (t.hasAttribute('data-brepass')) { bk('setpass', { word: t.getAttribute('data-brepass') }, true); return; }
+    if (bkPend && bkPend.step === mine.step) return;
+    if (t.hasAttribute('data-bopt')) bk('answer', { opt: Number(t.getAttribute('data-bopt')) });
+    else if (t.hasAttribute('data-bpass')) bk('setpass', { word: t.getAttribute('data-bpass') });
+    else if (t.hasAttribute('data-bpick')) bk('pick', { i: Number(t.getAttribute('data-bpick')) });
+    else if (t.hasAttribute('data-btarget')) bk('target', { target: t.getAttribute('data-btarget') });
+    else if (t.hasAttribute('data-bword')) bk('guess', { word: t.getAttribute('data-bword') });
+    else if (t.hasAttribute('data-bnext')) bk('next', {});
+    else if (t.hasAttribute('data-bcast')) {
+      var stepNow = mine.step;
+      castStep = stepNow;
+      FX.unlock(); FX.play('click'); FX.vibrate(20);
+      renderB();
+      clearTimeout(castT);
+      castT = setTimeout(function () { if (mine && mine.st === 'cast' && mine.step === stepNow) bk('cast', {}); }, 1100);
+    }
+  }
+  /* Полоска времени игры сверху и повторная отправка хода, если ответ от организатора не пришёл */
+  function bTimer(el) {
+    var on = view.phase === 'play' && view.left != null && view.total;
+    el.hidden = !on;
+    if (on) {
+      var remain = Math.max(0, view.left - (Date.now() - recvAt));
+      el.firstChild.style.transform = 'scaleX(' + (remain / view.total).toFixed(4) + ')';
+      el.classList.toggle('low', remain <= 10000);
+    }
+    if (bkPend && mine && net) {
+      if (mine.step !== bkPend.step) bkPend = null;
+      else if (Date.now() - bkPend.t > 2500) {
+        if (bkPend.tries < 4) { bkPend.t = Date.now(); bkPend.tries++; net.send(JSON.parse(JSON.stringify(bkPend.msg))); }
+        else { bkPend = null; net.send({ t: 'sync' }); renderB(); }
+      }
+    }
+  }
+  function showAlert(a) {
+    var old = document.querySelector('.bk-alert');
+    if (old) old.remove();
+    var el = document.createElement('div');
+    el.className = 'bk-alert ' + (a.mood < 0 ? 'bad' : 'good');
+    el.setAttribute('role', 'alert');
+    el.textContent = a.txt;
+    document.body.appendChild(el);
+    setTimeout(function () { el.classList.add('out'); setTimeout(function () { el.remove(); }, 400); }, 4200);
+    if (a.mood < 0) { FX.play('bad'); FX.vibrate([80, 60, 160]); } else { FX.play('neutral'); FX.vibrate(40); }
+  }
+  function bFx() {
+    var al = mine.alerts || [], last = al.length ? al[al.length - 1].n : 0;
+    if (lastAlert === null) lastAlert = last;
+    else if (last > lastAlert) { lastAlert = last; showAlert(al[al.length - 1]); }
+    var key = view.phase === 'end' ? 'end:' + view.id : mine.st + ':' + mine.step;
+    if (key === lastStKey) return;
+    var first = lastStKey === null;
+    lastStKey = key;
+    if (first) return;
+    var r = mine.res || {};
+    if (view.phase === 'end') { if (mine.place === 1) { FX.play('win'); FX.confetti({ count: 150, rain: true }); } return; }
+    switch (mine.st) {
+      case 'wrong': FX.play('wrong'); FX.vibrate(200); break;
+      case 'chest': case 'cast': FX.play('correct'); FX.vibrate([30, 40, 30]); break;
+      case 'reveal':
+        if (r.delta > 0 || r.k === 'hackok') { FX.play('good'); FX.confetti({ count: 50, y: innerHeight * 0.35 }); }
+        else if (r.delta < 0 || r.k === 'hackfail') FX.play('bad');
+        else FX.play('neutral');
+        break;
+      case 'catch': {
+        var f = FB.Blooket.FISH_BY[r.id] || {};
+        if (f.special || f.tier >= 3) { FX.play('good'); FX.confetti({ count: f.tier >= 4 ? 120 : 60, y: innerHeight * 0.35 }); }
+        else if (f.tier === 0) FX.play('neutral');
+        else FX.play('bonus');
+        break;
+      }
+      case 'q': castStep = null; break;
+    }
   }
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('[data-kopt]');

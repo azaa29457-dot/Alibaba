@@ -37,42 +37,93 @@
     if (/^https?:\/\/.+\.(mp4|webm|ogg)(\?.*)?$/i.test(url)) return '<video src="' + UI.esc(url) + '" autoplay playsinline controls></video>';
     return '';
   };
-  /* 20 смешных зацикленных роликов для победы (GIPHY). Каждый раз выбирается случайный. */
-  UI.WIN_GIFS = ['125E8v90blHqtr4HrB', 'S9r695TxMZ59xw301A', 'TbRkubcqlgBksEqMv4', '7xqRFGrGcC1UgZ6jUk', 'C3AjhNlO4SAtSNdAmY',
-    'FM57qpxeflq5Woi0Bj', 'CLJObmqmzxa1N6GAxB', 'xPSItdDHDPercnHGdx', 'sISX1icp5cE2Q6trd7', 'xCA3qbBcipx6iH3hBt',
-    'bOXnd3kig533u93OND', 'c5RzZOHPgry80', 'KCT1Hh7yIOlIxgIZi9', 'Ga0gHvT84m3yTE8lIp', 'd77o7i3tHnKda',
-    'yScooNo2jY6vQ8Vx8d', 'A0Zt7yuDULiy4ofmVD', 'oA6DW7rbHZ6hy', 'BMR4cgypuglVu', 'zFy8BA6xYRASTJS1De'];
+  /* Смешные видео с котами для экрана победы (GIPHY): каждый ролик крутится ~9 секунд, потом следующий. */
+  UI.WIN_GIFS = ['125E8v90blHqtr4HrB', 'EpiaEXhGVC7kI', 'DFRghyjqRDkJO', 'nlUsVJDJhnRym2L0di', 'sISX1icp5cE2Q6trd7',
+    'g2JO6qWbQhiV7m4AKM', 'GB0XWhoCDNNAW8M9vv', 'v6HmjWFF80ByC2JcRl', 'JoDT2WaykzFnN9vJqL', 'jsIa0hyKnzhQRDYObr',
+    'iqzp1pBJtNQUU', 'In0Lpu4FVivjISX9HT', '9sAxOHpYk2UOq8FBC8', 'CLJObmqmzxa1N6GAxB', 'xPSItdDHDPercnHGdx',
+    'ITAKo27WnL7ig', 'XyJ5bNle0Gp0IOb8Cp', 'Z1kpfgtHmpWHS', 'c5RzZOHPgry80', 'u9vFMyx1Ix2l17Lc1n',
+    'v3Rb7dGuvkmaRi6qei', 'xM9K5ef5Hy3pC', 'yoJC2ORv97vYg5PNVS', 'yxfNEwLzIwIO6wNvwu', 'V4NnsmEY7hsK4',
+    'NlJSAdKdcNA7C', 'Wu7UDoOBHPHm8', 'quO0X65yj6gw0', 'pcC2u7rl89b44', 'gm3Z05VsyZsFG',
+    'Jd5YlXOVTcQtW', 'A0Zt7yuDULiy4ofmVD', 'NfzERYyiWcXU4'];
   UI.dancersHtml = function (list) {
     return '<div class="cel-dancers" aria-hidden="true">' + (list || ['dance1', 'party', 'monkey', 'robot', 'unicorn', 'cool', 'dance2']).map(function (n, i) {
       return '<img src="img/ui/' + n + '.webp" alt="" style="--i:' + i + '">';
     }).join('') + '</div>';
   };
-  /* Показывает случайное видео победы по кругу. Если интернета нет — танцующие 3D-персонажи. */
+  UI.WIN_CLIP_MS = 9000;
+  /* Видео победы: смешные коты один за другим. Кнопка ⛶ разворачивает видео почти на весь экран, 🔀 — следующий кот.
+     Если интернета нет — танцующие 3D-персонажи. */
   UI.winVideo = function (box, custom) {
     if (!box) return;
     var emb = UI.videoEmbed(custom);
     if (emb) { box.innerHTML = emb; return; }
-    var order = E.shuffle(UI.WIN_GIFS.slice()), k = 0, fails = 0;
+    box.classList.add('cats');
+    var order = E.shuffle(UI.WIN_GIFS.slice()), k = 0, fails = 0, cur = null;
+    function play(v) { try { var pr = v.play(); if (pr && pr.catch) pr.catch(function () { }); } catch (e) { } }
     function show() {
-      if (fails >= 4) { box.classList.add('no-video'); box.innerHTML = UI.dancersHtml(); return; }
+      if (!box.isConnected && k > 0) return; // экран уже закрыт
+      if (fails >= 4) { box.classList.add('no-video'); box.classList.remove('cats'); box.innerHTML = UI.dancersHtml(); return; }
       var id = order[k % order.length]; k++;
+      var src = 'https://media.giphy.com/media/' + id + '/giphy.mp4';
       box.classList.remove('no-video');
-      box.innerHTML = '<video autoplay loop muted playsinline preload="auto"></video>' +
-        '<button class="win-shuffle" type="button" aria-label="Другое видео" title="Другое видео">🔀</button><span class="win-credit">GIPHY</span>';
-      var vid = box.querySelector('video'), done = false;
-      function fail() { if (done) return; done = true; clearTimeout(to); fails++; show(); }
+      box.innerHTML = '<video class="win-bg" muted playsinline loop preload="auto" aria-hidden="true"></video>' +
+        '<video class="win-main" muted playsinline preload="auto" aria-label="Смешное видео с котом"></video>' +
+        '<button class="win-big" type="button" aria-label="Видео крупнее" title="Крупнее">⛶</button>' +
+        '<button class="win-shuffle" type="button" aria-label="Другое видео" title="Другой кот">🔀</button><span class="win-credit">GIPHY</span>';
+      var vid = box.querySelector('.win-main'), bg = box.querySelector('.win-bg'), done = false, started = Date.now();
+      var me = cur = {};
+      function fail() { if (done || cur !== me) return; done = true; clearTimeout(to); fails++; show(); }
       var to = setTimeout(function () { if (vid.readyState < 2) fail(); }, 7000);
       vid.addEventListener('error', fail);
       vid.addEventListener('loadeddata', function () { done = true; clearTimeout(to); fails = 0; });
-      vid.addEventListener('loadedmetadata', function () {
-        if (vid.videoWidth && vid.videoHeight) box.style.setProperty('--var', (vid.videoWidth / vid.videoHeight).toFixed(4));
+      vid.addEventListener('ended', function () {
+        if (cur !== me) return;
+        if (Date.now() - started < UI.WIN_CLIP_MS) { vid.currentTime = 0; play(vid); }
+        else show();
       });
-      vid.src = 'https://media.giphy.com/media/' + id + '/giphy.mp4';
-      try { var pr = vid.play(); if (pr && pr.catch) pr.catch(function () { }); } catch (e) { }
-      box.querySelector('.win-shuffle').addEventListener('click', function () { done = true; clearTimeout(to); show(); });
+      vid.src = src; bg.src = src;
+      play(vid); play(bg);
+    }
+    // ⛶: видео переносится в слой поверх всей страницы, на его место — пустая заглушка того же размера
+    box._max = function (on) {
+      if (on && !box._ph) {
+        var ph = document.createElement('div');
+        ph.className = box.className + ' win-ph';
+        box.parentNode.insertBefore(ph, box);
+        box._ph = ph;
+        var ov = document.createElement('div');
+        ov.className = 'win-overlay';
+        ov.addEventListener('click', function (e) { if (e.target === ov) box._max(false); });
+        document.body.appendChild(ov);
+        ov.appendChild(box);
+        box.classList.add('max');
+      } else if (!on && box._ph) {
+        var o = box.parentNode;
+        if (box._ph.parentNode) box._ph.parentNode.insertBefore(box, box._ph);
+        box._ph.remove(); box._ph = null;
+        if (o && o.classList.contains('win-overlay')) o.remove();
+        box.classList.remove('max');
+      }
+      UI.$$('video', box).forEach(play);
+      var bb = box.querySelector('.win-big');
+      if (bb) { bb.setAttribute('aria-label', on ? 'Свернуть видео' : 'Видео крупнее'); bb.title = on ? 'Свернуть' : 'Крупнее'; }
+    };
+    if (!box._wv) {
+      box._wv = true;
+      box.addEventListener('click', function (e) {
+        if (e.target.closest('.win-shuffle')) { e.stopPropagation(); show(); }
+        else if (e.target.closest('.win-big')) { e.stopPropagation(); box._max(!box._ph); }
+      });
     }
     show();
   };
+  UI.closeBigVideo = function () {
+    UI.$$('.win-overlay .win-video').forEach(function (b) { if (b._max) b._max(false); });
+    UI.$$('.win-overlay').forEach(function (o) { o.remove(); });
+  };
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && document.querySelector('.win-overlay')) { UI.closeBigVideo(); e.stopPropagation(); }
+  }, true);
   UI.savedTheme = function () { var c = UI.store.get('alibaba.setup', null); return c && c.theme ? c.theme : 'violet'; };
   UI.esc = function (s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -94,6 +145,7 @@
     del: function (k) { try { localStorage.removeItem(k); } catch (e) { } }
   };
   UI.screen = function (name, html) {
+    UI.closeBigVideo();
     var app = UI.app();
     app.setAttribute('data-screen', name);
     app.innerHTML = html;
@@ -232,7 +284,7 @@
             (phone ? '' : '<button type="button" class="btn btn-yellow btn-small" id="createBtnNav">Создать игру</button>') +
           '</div>' +
         '</header>' +
-        (hostSave ? '<div class="resume-bar"><span>У вас есть незаконченная игра «' + UI.esc(hostSave.title) + '» — осталось ' + hostSave.left + ' ' + UI.plural(hostSave.left, 'плитка', 'плитки', 'плиток') + '.</span>' +
+        (hostSave ? '<div class="resume-bar"><span>У вас есть незаконченная игра «' + UI.esc(hostSave.title) + '» — ' + (hostSave.text || 'осталось ' + hostSave.left + ' ' + UI.plural(hostSave.left, 'плитка', 'плитки', 'плиток')) + '.</span>' +
           '<span class="resume-btns"><button class="btn btn-small btn-yellow" id="resumeBtn" type="button">Продолжить</button>' +
           '<button class="btn btn-small btn-ghost" id="dropBtn" type="button">Удалить</button></span></div>' : '') +
         '<section class="hero">' +
@@ -353,7 +405,7 @@
 
   var DEFAULT_CFG = {
     mode: 'screen', teamCount: 2, teams: ['Команда 1', 'Команда 2', 'Команда 3', 'Команда 4'],
-    count: 16, timer: 30, theme: 'violet', winVideo: '',
+    count: 16, timer: 30, theme: 'violet', winVideo: '', bgame: 'gold', minutes: 7,
     powerOn: true, freq: 'mid', powerIds: E.PRESETS.classic.slice()
   };
   var S = null;
@@ -366,7 +418,9 @@
     out.powerIds = (out.powerIds || []).filter(function (id) { return E.POWER[id]; });
     if (!out.powerIds.length) out.powerIds = E.PRESETS.classic.slice();
     if ([2, 3, 4].indexOf(out.teamCount) < 0) out.teamCount = 2;
-    if (out.mode !== 'screen') out.mode = 'kahoot';
+    if (out.mode !== 'screen' && out.mode !== 'blooket') out.mode = 'kahoot';
+    if (!FB.Blooket || !FB.Blooket.GAMES[out.bgame]) out.bgame = 'gold';
+    if (FB.Blooket && FB.Blooket.MINUTES.indexOf(out.minutes) < 0) out.minutes = 7;
     return out;
   }
   function saveCfg() { UI.store.set('alibaba.setup', S.cfg); }
@@ -560,12 +614,18 @@
       teamInputs += '<label class="team-input" style="--tc:' + E.TEAM_COLORS[i] + '"><span class="dot" aria-hidden="true"></span>' +
         '<span class="sr-only">Команда ' + (i + 1) + '</span><input type="text" maxlength="24" data-team="' + i + '" value="' + UI.esc(c.teams[i]) + '"></label>';
     }
-    var isK = c.mode === 'kahoot';
-    var modes = [['screen', 'Baamboozle', 'screen'], ['kahoot', 'Kahoot', 'phones']].map(function (m) {
+    var isK = c.mode === 'kahoot', isB = c.mode === 'blooket';
+    var modes = [['screen', 'Baamboozle', 'screen'], ['kahoot', 'Kahoot', 'phones'], ['blooket', 'Blooket', 'blooket']].map(function (m) {
       var on = c.mode === m[0];
       return '<button type="button" role="radio" aria-checked="' + on + '" class="mode' + (on ? ' on' : '') + '" data-mode="' + m[0] + '">' +
         '<img src="img/ui/' + m[2] + '.webp" alt="" draggable="false"><b>' + m[1] + '</b></button>';
     }).join('');
+    var BL = FB.Blooket;
+    var bgames = isB ? BL.ORDER.map(function (id) {
+      var g = BL.GAMES[id], on = c.bgame === id;
+      return '<button type="button" role="radio" aria-checked="' + on + '" class="bgame' + (on ? ' on' : '') + '" data-bgame="' + id + '">' +
+        '<img src="img/bk/' + g.img + '.webp" alt="" draggable="false"><b>' + UI.esc(g.name) + '</b><small>' + UI.esc(g.about) + '</small></button>';
+    }).join('') : '';
     var timers = isK ? [10, 20, 30, 60] : [0, 20, 30, 45, 60];
     if (timers.indexOf(c.timer) < 0) c.timer = isK ? 20 : 30;
     var themes = UI.THEMES.map(function (t) {
@@ -581,13 +641,16 @@
     return chosenHeader() +
       '<div class="settings">' +
         row('Режим', '<div class="modes" role="radiogroup">' + modes + '</div>') +
-        (isK ? '' : row('Команды', '<div class="row-gap">' + seg('teamCount', [{ v: 2, t: '2' }, { v: 3, t: '3' }, { v: 4, t: '4' }], c.teamCount) +
+        (isB ? row('Игра', '<div class="bgames" role="radiogroup">' + bgames + '</div>', 'tall') +
+          row('Время', seg('minutes', BL.MINUTES.map(function (n) { return { v: n, t: n + ' мин' }; }), c.minutes)) +
+          '<p class="set-note">Каждый отвечает на своём телефоне в своём темпе. Вопросы — из выбранных тем (' + Math.min(avail, BL.POOL_MAX) + ' ' + UI.plural(Math.min(avail, BL.POOL_MAX), 'вопрос', 'вопроса', 'вопросов') + '), у каждого в своём порядке.</p>' : '') +
+        (isK || isB ? '' : row('Команды', '<div class="row-gap">' + seg('teamCount', [{ v: 2, t: '2' }, { v: 3, t: '3' }, { v: 4, t: '4' }], c.teamCount) +
           '<button type="button" class="dice-btn" id="randNames" aria-label="Случайные названия" title="Случайные названия"><img src="img/ui/dice.webp" alt=""></button></div>' +
           '<div class="team-inputs">' + teamInputs + '</div>')) +
-        row('Вопросы', seg('count', opts.map(function (n) { return { v: n, t: String(n) }; }), c.count)) +
-        row('Таймер', seg('timer', timers.map(function (n) { return { v: n, t: n ? n + ' с' : 'Нет' }; }), c.timer)) +
+        (isB ? '' : row('Вопросы', seg('count', opts.map(function (n) { return { v: n, t: String(n) }; }), c.count)) +
+          row('Таймер', seg('timer', timers.map(function (n) { return { v: n, t: n ? n + ' с' : 'Нет' }; }), c.timer))) +
         row('Фон', '<div class="themes" role="radiogroup">' + themes + '</div>') +
-        (isK ? '' : row('Бонусы', '<label class="switch"><input type="checkbox" id="powerOn"' + (c.powerOn ? ' checked' : '') + '><span class="sw" aria-hidden="true"></span><span class="sr-only">Бонусы</span></label>') +
+        (isK || isB ? '' : row('Бонусы', '<label class="switch"><input type="checkbox" id="powerOn"' + (c.powerOn ? ' checked' : '') + '><span class="sw" aria-hidden="true"></span><span class="sr-only">Бонусы</span></label>') +
         (c.powerOn ?
           row('Частота', seg('freq', [{ v: 'low', t: 'Мало' }, { v: 'mid', t: 'Средне' }, { v: 'high', t: 'Много' }], c.freq)) +
           row('Power-ups', '<div class="pws">' + pws + '</div><button type="button" class="btn btn-ghost btn-small" data-preset="all">Выбрать все</button>', 'tall') : '')) +
@@ -629,6 +692,7 @@
         S.cfg.theme = t.getAttribute('data-theme-pick'); UI.applyTheme(S.cfg.theme); saveCfg(); rerenderSettings(); return;
       }
       if ((t = e.target.closest('[data-mode]'))) { S.cfg.mode = t.getAttribute('data-mode'); saveCfg(); rerenderSettings(); return; }
+      if ((t = e.target.closest('[data-bgame]'))) { S.cfg.bgame = t.getAttribute('data-bgame'); FB.FX.play('click'); saveCfg(); rerenderSettings(); return; }
       if ((t = e.target.closest('.seg button'))) {
         var name = t.closest('.seg').getAttribute('data-seg');
         var v = t.getAttribute('data-v');
@@ -689,6 +753,7 @@
     FB.Host.create({
       mode: c.mode, teams: names, topicKeys: S.selected.slice(),
       count: c.mode === 'kahoot' ? Math.min(c.count, avail) : c.count, timer: c.timer, theme: c.theme, winVideo: c.winVideo,
+      game: c.bgame, minutes: c.minutes,
       powerups: { on: c.powerOn, freq: c.freq, ids: c.powerIds.slice() },
       title: title, subtitle: subtitle
     });
