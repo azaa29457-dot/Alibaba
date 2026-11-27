@@ -41,7 +41,11 @@
     return g.s.tiles ? { title: g.s.cfg.title, left: E.leftTiles(g.s) } : null;
   };
   H.clearSave = function () { UI.store.del('alibaba.host'); };
-  function save() { if (s) UI.store.set('alibaba.host', { t: Date.now(), s: s }); }
+  function save() {
+    if (!s) return;
+    UI.store.set('alibaba.host', { t: Date.now(), s: s });
+    if (FB.Log) FB.Log.touch(s); // журнал игр для админ-панели
+  }
 
   /* ---------- Запуск ---------- */
   H.create = function (cfg) {
@@ -74,6 +78,7 @@
     begin(true);
   };
   H.stop = function () {
+    if (FB.Log) FB.Log.flush();
     timers.forEach(function (t) { clearInterval(t); });
     timers = [];
     if (raf) cancelAnimationFrame(raf);
@@ -162,8 +167,9 @@
     if (!s || s.phase !== 'end') return;
     FX.play('win');
     FX.confetti({ count: 240, rain: true });
-    setTimeout(function () { FX.confetti({ count: 140, y: innerHeight * 0.35, power: 13 }); }, 900);
-    setTimeout(function () { FX.confetti({ count: 110, x: innerWidth * 0.15, y: innerHeight * 0.55, power: 11 }); FX.confetti({ count: 110, x: innerWidth * 0.85, y: innerHeight * 0.55, power: 11 }); }, 1800);
+    // повторные залпы — только если экран итогов ещё открыт (не ушли на главную или в админ-панель)
+    setTimeout(function () { if (built) FX.confetti({ count: 140, y: innerHeight * 0.35, power: 13 }); }, 900);
+    setTimeout(function () { if (built) { FX.confetti({ count: 110, x: innerWidth * 0.15, y: innerHeight * 0.55, power: 11 }); FX.confetti({ count: 110, x: innerWidth * 0.85, y: innerHeight * 0.55, power: 11 }); } }, 1800);
   }
   function closePlayers() { if (net) net.broadcast({ t: 'closed' }); }
   function broadcast() {

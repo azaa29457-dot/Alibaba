@@ -148,6 +148,8 @@
     if (parts.length) raf = root.requestAnimationFrame(loop);
     else { raf = 0; cctx.clearRect(0, 0, canvas.width, canvas.height); }
   }
+  /* Убрать конфетти сразу (например, при переходе в админ-панель) */
+  FX.clearConfetti = function () { parts = []; if (cctx && canvas) cctx.clearRect(0, 0, canvas.width, canvas.height); };
   FX.confetti = function (opts) {
     if (reduced()) return;
     opts = opts || {};
