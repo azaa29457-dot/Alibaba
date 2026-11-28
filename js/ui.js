@@ -1,3 +1,4 @@
+/* © 2026 azaa29457-dot. Все права защищены. Копирование без разрешения автора запрещено (см. LICENSE). */
 /* Alibaba — общие помощники интерфейса, главная страница и создание игры. */
 (function (root) {
   'use strict';
@@ -327,7 +328,8 @@
           '</ol>' +
         '</section>' +
         '<footer class="foot">Alibaba — командная викторина. В базе: ' +
-          FB.subjects.map(function (s) { return UI.esc(s.title + (s.grade ? ' ' + s.grade : '')); }).join(', ') + '.</footer>' +
+          FB.subjects.map(function (s) { return UI.esc(s.title + (s.grade ? ' ' + s.grade : '')); }).join(', ') + '.' +
+          '<span class="foot-copy">© 2026 azaa29457-dot. Все права защищены. Копировать сайт и вопросы без разрешения автора нельзя.</span></footer>' +
       '</div>';
     UI.screen('home', html);
     var input = UI.$('#codeInput');

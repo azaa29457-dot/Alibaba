@@ -1,3 +1,4 @@
+/* © 2026 azaa29457-dot. Все права защищены. Копирование без разрешения автора запрещено (см. LICENSE). */
 /* Alibaba — стили. Идея: кобальтовая «чертёжная» доска в клетку, жёлтые игровые плитки,
    а вопрос появляется на листе школьной тетради с красными полями. */
 
@@ -1782,3 +1783,4 @@ img.kp-av { width: clamp(56px, 8vh, 84px); height: auto; animation: popIn .6s cu
   .adm-row .adm-mode, .adm-row .adm-n, .adm-row .adm-win { display: none; }
   .adm-when { grid-column: 1 / -1; }
 }
+.foot-copy { display: block; margin-top: 8px; font-size: .82rem; color: rgba(255, 255, 255, .55); }

@@ -1,3 +1,4 @@
+/* © 2026 azaa29457-dot. Все права защищены. Копирование без разрешения автора запрещено (см. LICENSE). */
 /*
   Курс: English, Pre-Intermediate. Дополнительная программа, не школьная.
   Темы — уроки учебника Tim Falla, Paul A Davies «Solutions Pre-Intermediate», 3rd edition (Oxford University Press): Introduction (IA–ID) и Units 1–9 (уроки A–H).

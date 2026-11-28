@@ -1,0 +1,24 @@
+Copyright (c) 2026 azaa29457-dot. Все права защищены. All rights reserved.
+
+Сайт Alibaba (https://azaa29457-dot.github.io/Alibaba/) — код, оформление, режимы игр,
+вопросы и тексты — принадлежит автору.
+
+Без письменного разрешения автора нельзя копировать, распространять, публиковать
+на других сайтах, продавать или переделывать этот сайт и его части, в том числе
+базу вопросов. Можно открывать сайт и играть в него на уроках и с друзьями.
+
+Правила GitHub позволяют другим пользователям смотреть этот репозиторий и делать
+его копию (форк) внутри GitHub. Это не даёт права использовать работу где-то ещё.
+
+Чужие части сайта остаются под своими лицензиями:
+- библиотеки PeerJS, MQTT.js, генератор QR-кодов — vendor/LICENSES.txt;
+- шрифты (SIL Open Font License) — fonts/OFL-*.txt;
+- 3D-картинки Fluent Emoji (MIT, Microsoft) — img/LICENSE.txt;
+- видео с котами показываются с GIPHY и принадлежат их авторам.
+
+---
+
+All rights reserved. No part of this website (code, design, game modes, questions,
+texts) may be copied, redistributed, published elsewhere, sold or modified without
+the author's written permission. Third-party components listed above remain under
+their own licenses.
